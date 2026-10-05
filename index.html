@@ -113,8 +113,8 @@
 
   </main>
 
-  <!-- ================= FIXED BOTTOM-RIGHT BUG REPORT BUTTON (FIXED POSITION) ================= -->
-  <div style="position: fixed; bottom: 25px; right: 25px; z-index: 999999;">
+  <!-- ================= FIXED BOTTOM-LEFT BUG REPORT BUTTON ================= -->
+  <div style="position: fixed; bottom: 25px; left: 25px; z-index: 999999;">
     <button onclick="openBugModal()" style="background-color: #f43f5e; color: white; padding: 12px 18px; border-radius: 9999px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px; border: 2px solid #fb7185; cursor: pointer;">
       <span>🐛 Report Bug</span>
     </button>
@@ -761,6 +761,7 @@
       if (ssList.length > 0) {
         ssList.forEach((ss, idx) => {
           const canDelete = canDeleteContent(ss.owner || membersData[memberName].owner);
+          gallery.html += `...`; // omitted for brevity
           gallery.innerHTML += `
             <div class="relative group cursor-pointer" onclick="zoomImageByIndex(${idx})">
               <img src="${ss.src}" class="w-full h-36 object-cover rounded-xl border border-gray-700 group-hover:opacity-75 transition">
