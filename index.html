@@ -473,6 +473,9 @@
       const name = inputField.value.trim();
 
       if (name) {
+        // ১. সবার আগে মডাল বন্ধ করা হলো যাতে পপআপ স্ক্রিন থেকে সাথে সাথে চলে যায়
+        closeAddMemberModal();
+
         if (!membersData[name]) {
           membersData[name] = {
             owner: currentUser.email,
@@ -486,9 +489,6 @@
         if (db) {
           db.collection("evidence_board_v2").doc(name).set(membersData[name], { merge: true }).catch(err => console.error("Firebase Sync issue:", err));
         }
-
-        // মডাল বন্ধ করার ফাংশন কল করা হলো
-        closeAddMemberModal();
       }
     }
 
