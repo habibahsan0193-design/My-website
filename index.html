@@ -34,12 +34,12 @@
     }
   </style>
 </head>
-<body class="bg-[#0f1115] text-white p-6 font-sans pb-20">
+<body class="bg-[#0f1115] text-white p-6 font-sans pb-24">
 
   <!-- Header / Navbar -->
   <header class="flex flex-wrap justify-between items-center max-w-6xl mx-auto mb-10 gap-4">
     <div class="flex items-center space-x-3 cursor-pointer group" onclick="switchTab('members')">
-      <div class="bg-red-500/20 text-red-500 p-2 rounded-lg font-bold group-hover:scale-110 transition-transform">⚠️</div>
+      <div class="bg-red-500/20 text-red-500 p-2 rounded-lg font-bold group-hover:scale-110 transition-transform">⚠️️</div>
       <div>
         <h1 class="font-bold text-lg group-hover:text-rose-400 transition-colors">Odommo Batch</h1>
         <p class="text-xs text-gray-400">Public evidence board</p>
@@ -114,9 +114,9 @@
   </main>
 
   <!-- ================= FIXED BOTTOM-RIGHT BUG REPORT BUTTON ================= -->
-  <div class="fixed bottom-6 right-6 z-50">
-    <button onclick="openBugModal()" class="bg-rose-600 hover:bg-rose-700 text-white p-3.5 rounded-full shadow-2xl flex items-center justify-center transition hover:scale-110 border border-rose-400 group" title="Report a Bug">
-      <span class="text-xl">🐛</span>
+  <div style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;">
+    <button onclick="openBugModal()" style="background-color: #f43f5e; color: white; padding: 12px 16px; border-radius: 9999px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px; border: 1px solid #fb7185; cursor: pointer;">
+      <span>🐛 Report Bug</span>
     </button>
   </div>
 
@@ -226,7 +226,7 @@
     </div>
   </div>
 
-  <!-- ================= ZOOM LIGHTBOX (WITH PAN & NAVIGATION) ================= -->
+  <!-- ================= ZOOM LIGHTBOX ================= -->
   <div id="zoomModal" class="fixed inset-0 bg-black/95 hidden flex-col items-center justify-center z-50 p-4">
     <span onclick="closeZoom()" class="absolute top-4 right-6 text-white text-4xl cursor-pointer hover:text-red-500 font-bold z-50">&times;</span>
     <div class="text-xs text-gray-400 absolute top-4 left-6 z-50 bg-[#181a20]/80 p-2 rounded-lg border border-gray-800">
