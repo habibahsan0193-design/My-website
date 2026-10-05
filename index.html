@@ -140,14 +140,14 @@
       <h2 class="text-xl font-bold mb-2">Add New Member Profile</h2>
       <p class="text-xs text-gray-400 mb-4">Member er naam likhe Enter chapun ba button e click korun.</p>
       
-      <!-- ফর্ম ট্যাগ ব্যবহার করা হলো যাতে এন্টার চাপলেই সাবমিট হয় -->
-      <form onsubmit="handleCreateMember(event)" class="space-y-4">
+      <!-- এখানে অনসাবমিট সরিয়ে সরাসরি ইনপুট ও বাটন হ্যান্ডেল করা হয়েছে -->
+      <div class="space-y-4">
         <div>
           <label class="block text-xs text-gray-400 mb-1">Member Name</label>
-          <input type="text" id="newMemberName" class="w-full bg-[#0f1115] border border-gray-700 rounded-xl p-2.5 text-sm focus:outline-none focus:border-rose-500" placeholder="e.g. PK baby" required>
+          <input type="text" id="newMemberName" onkeydown="handleMemberKeydown(event)" class="w-full bg-[#0f1115] border border-gray-700 rounded-xl p-2.5 text-sm focus:outline-none focus:border-rose-500" placeholder="e.g. PK baby">
         </div>
-        <button type="submit" id="createMemberBtn" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-medium transition text-sm hover:-translate-y-0.5">Create Profile</button>
-      </form>
+        <button type="button" onclick="handleCreateMember()" id="createMemberBtn" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-medium transition text-sm hover:-translate-y-0.5">Create Profile</button>
+      </div>
     </div>
   </div>
 
@@ -458,10 +458,8 @@
       renderEvidencePage();
     }
 
-    // নতুন মেম্বার ক্রিয়েট করার মূল ফাংশন (ফর্ম সাবমিট হিসেবে হ্যান্ডেল করা হবে)
-    function handleCreateMember(event) {
-      if (event) event.preventDefault();
-
+    // নতুন মেম্বার ক্রিয়েট করার মূল ফাংশন
+    function handleCreateMember() {
       if (!currentUser) {
         alert("Please Login or Sign Up first to add a member!");
         openAuthModal();
@@ -476,7 +474,7 @@
         return;
       }
 
-      // সবার আগে পপআপ মডাল বন্ধ করা হলো
+      // ১. সবার আগে পপআপ মডাল বন্ধ করা হলো
       closeAddMemberModal();
 
       if (!membersData[name]) {
@@ -492,6 +490,14 @@
       if (db) {
         db.collection("evidence_board_v2").doc(name).set(membersData[name], { merge: true })
           .catch(err => console.error("Firebase Sync issue:", err));
+      }
+    }
+
+    // கீবোর্ডের এন্টার (Enter) চাপলে যেন কাজ করে
+    function handleMemberKeydown(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        handleCreateMember();
       }
     }
 
