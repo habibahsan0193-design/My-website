@@ -197,14 +197,15 @@
   </div>
 
   <script>
-    // Firebase Config
+    // Firebase Config (Updated with your project details)
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "SENDER_ID",
-      appId: "APP_ID"
+      apiKey: "AIzaSyCzuv5iuPCF3mAeAN2d0VmZVEsMlFivKaQ",
+      authDomain: "adommo-24297.firebaseapp.com",
+      projectId: "adommo-24297",
+      storageBucket: "adommo-24297.firebasestorage.app",
+      messagingSenderId: "1059800003803",
+      appId: "1:1059800003803:web:8e8895224d00f0566548fe",
+      measurementId: "G-8H1CYXTZX2"
     };
 
     const ADMIN_EMAIL = "habibahsan0193@gmail.com";
@@ -215,16 +216,15 @@
     let authMode = 'login';
 
     try {
-      if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+      if (firebaseConfig.apiKey) {
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
         auth = firebase.auth();
       }
     } catch(e) {
-      console.log("Firebase fallback mode active.");
+      console.log("Firebase initialization error:", e);
     }
 
-    // Default starting data if Firestore is empty
     let membersData = {
       "PK baby": { owner: "admin@odommo.com", screenshots: [] },
       "Modina Modina/MD": { owner: "admin@odommo.com", screenshots: [] },
@@ -244,18 +244,13 @@
       });
     }
 
-    // FIX: Firebase Firestore Realtime Listener (সবার জন্য ডেটা লাইভ সিঙ্ক হবে)
+    // Firebase Firestore Realtime Sync (সবার জন্য লাইভ আপডেট দেখানোর জন্য)
     if (db) {
       db.collection("evidence_board_v2").onSnapshot((snapshot) => {
         if (!snapshot.empty) {
           membersData = {};
           snapshot.forEach((doc) => {
             membersData[doc.id] = doc.data() || { owner: "admin@odommo.com", screenshots: [] };
-          });
-        } else {
-          // যদি ডেটাবেজ একদম খালি থাকে, তবে ডিফল্ট মেম্বারগুলো আপলোড করে দেওয়া যেতে পারে
-          Object.keys(membersData).forEach(name => {
-            db.collection("evidence_board_v2").doc(name).set(membersData[name]);
           });
         }
         renderBoard();
@@ -321,21 +316,12 @@
         } else {
           auth.createUserWithEmailAndPassword(email, pass).then(() => closeAuthModal()).catch(err => alert(err.message));
         }
-      } else {
-        currentUser = { email: email };
-        updateAuthHeaderUI();
-        renderBoard();
-        closeAuthModal();
       }
     }
 
     function logoutUser() {
       if (auth) {
         auth.signOut();
-      } else {
-        currentUser = null;
-        updateAuthHeaderUI();
-        renderBoard();
       }
     }
 
@@ -490,9 +476,7 @@
         if (db) {
           db.collection("evidence_board_v2").doc(name).set(membersData[name], { merge: true }).then(() => {
             closeAddMemberModal();
-          }).catch(err => alert("Error saving to database: " + err.message));
-        } else {
-          closeAddMemberModal();
+          }).catch(err => alert("Error: " + err.message));
         }
       }
     }
@@ -510,9 +494,6 @@
       if (confirm(`Are you sure you want to delete "${memberName}"?`)) {
         if (db) {
           db.collection("evidence_board_v2").doc(memberName).delete().catch(err => console.error(err));
-        } else {
-          delete membersData[memberName];
-          renderBoard();
         }
       }
     }
