@@ -140,13 +140,14 @@
       <h2 class="text-xl font-bold mb-2">Add New Member Profile</h2>
       <p class="text-xs text-gray-400 mb-4">Member er naam likhe Enter chapun ba button e click korun.</p>
       
-      <form onsubmit="handleCreateMember(event)" class="space-y-4">
+      <!-- এখানে অনসাবমিট সরিয়ে সরাসরি ইনপুট ও বাটন হ্যান্ডেল করা হয়েছে -->
+      <div class="space-y-4">
         <div>
           <label class="block text-xs text-gray-400 mb-1">Member Name</label>
-          <input type="text" id="newMemberName" class="w-full bg-[#0f1115] border border-gray-700 rounded-xl p-2.5 text-sm focus:outline-none focus:border-rose-500" placeholder="e.g. PK baby" required>
+          <input type="text" id="newMemberName" onkeydown="handleMemberKeydown(event)" class="w-full bg-[#0f1115] border border-gray-700 rounded-xl p-2.5 text-sm focus:outline-none focus:border-rose-500" placeholder="e.g. PK baby">
         </div>
-        <button type="submit" id="createMemberBtn" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-medium transition text-sm hover:-translate-y-0.5">Create Profile</button>
-      </form>
+        <button type="button" onclick="handleCreateMember()" id="createMemberBtn" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-medium transition text-sm hover:-translate-y-0.5">Create Profile</button>
+      </div>
     </div>
   </div>
 
@@ -197,7 +198,7 @@
   </div>
 
   <script>
-    // Firebase Config (Updated with your project details)
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCzuv5iuPCF3mAeAN2d0VmZVEsMlFivKaQ",
       authDomain: "adommo-24297.firebaseapp.com",
@@ -225,7 +226,7 @@
       console.log("Firebase fallback mode active.");
     }
 
-    // Data Structure - ডিফল্ট মেম্বারগুলো মুছে ফাঁকা রাখা হলো
+    // Data Structure
     let membersData = JSON.parse(localStorage.getItem('evidenceData_v2')) || {};
     let currentFilter = 'All';
 
@@ -457,8 +458,8 @@
       renderEvidencePage();
     }
 
-    function handleCreateMember(event) {
-      event.preventDefault();
+    // নতুন মেম্বার ক্রিয়েট করার মূল ফাংশন
+    function handleCreateMember() {
       if (!currentUser) {
         alert("Please Login or Sign Up first to add a member!");
         openAuthModal();
@@ -468,26 +469,35 @@
       const inputField = document.getElementById('newMemberName');
       const name = inputField.value.trim();
 
-      if (name) {
-        closeAddMemberModal();
+      if (!name) {
+        alert("Please enter a member name!");
+        return;
+      }
 
-        try {
-          if (!membersData[name]) {
-            membersData[name] = {
-              owner: currentUser.email,
-              screenshots: []
-            };
-          }
+      // ১. সবার আগে পপআপ মডাল বন্ধ করা হলো
+      closeAddMemberModal();
 
-          localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
-          renderBoard();
+      if (!membersData[name]) {
+        membersData[name] = {
+          owner: currentUser.email,
+          screenshots: []
+        };
+      }
 
-          if (db) {
-            db.collection("evidence_board_v2").doc(name).set(membersData[name], { merge: true }).catch(err => console.error("Firebase Sync issue:", err));
-          }
-        } catch (err) {
-          console.error(err);
-        }
+      localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
+      renderBoard();
+
+      if (db) {
+        db.collection("evidence_board_v2").doc(name).set(membersData[name], { merge: true })
+          .catch(err => console.error("Firebase Sync issue:", err));
+      }
+    }
+
+    // கீবোর্ডের এন্টার (Enter) চাপলে যেন কাজ করে
+    function handleMemberKeydown(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        handleCreateMember();
       }
     }
 
