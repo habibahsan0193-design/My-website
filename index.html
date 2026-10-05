@@ -143,7 +143,7 @@
       <form onsubmit="handleCreateMember(event)" class="space-y-4">
         <div>
           <label class="block text-xs text-gray-400 mb-1">Member Name</label>
-          <input type="text" id="newMemberName" class="w-full bg-[#0f1115] border border-gray-700 rounded-xl p-2.5 text-sm focus:outline-none focus:border-rose-500" placeholder="e.g. PK baby" required>
+          <input type="text" id="newMemberName" class="w-full bg-[#0f1115] border border-gray-700 rounded-xl p-2.5 text-sm focus:outline-none focus:border-rose-500" placeholder="e.g. John Doe" required>
         </div>
         <button type="submit" id="createMemberBtn" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-medium transition text-sm hover:-translate-y-0.5">Create Profile</button>
       </form>
@@ -225,8 +225,8 @@
       console.log("Firebase fallback mode active.");
     }
 
-    // Data Structure
-    let membersData = JSON.parse(localStorage.getItem('evidenceData_v2')) || {};
+    // Data Structure - ডিফল্ট কোনো নাম রাখা হয়নি, একদম খালি রাখা হয়েছে
+    let membersData = JSON.parse(localStorage.getItem('evidenceData_v3')) || {};
     let currentFilter = 'All';
 
     // Firebase Auth Listener
@@ -243,12 +243,16 @@
 
     // Firebase Firestore Sync (Real-time update)
     if (db) {
-      db.collection("evidence_board_v2").onSnapshot((snapshot) => {
-        membersData = {};
+      db.collection("evidence_board_v3").onSnapshot((snapshot) => {
+        const remoteData = {};
         snapshot.forEach((doc) => {
-          membersData[doc.id] = doc.data() || { owner: "admin@odommo.com", screenshots: [] };
+          remoteData[doc.id] = doc.data() || { owner: "admin@odommo.com", screenshots: [] };
         });
-        localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
+        
+        // লোকাল ডেটার সাথে রিমোট ডেটা সিংক্রোনাইজ করা
+        membersData = remoteData;
+        localStorage.setItem('evidenceData_v3', JSON.stringify(membersData));
+        
         renderBoard();
         if (!document.getElementById('evidenceView').classList.contains('hidden')) {
           renderEvidencePage();
@@ -457,7 +461,7 @@
       renderEvidencePage();
     }
 
-    // নতুন মেম্বার ক্রিয়েট করার ফাংশন (ডুপ্লিকেট ও কেস-সেন্সিটিভ নাম রোধ করার ব্যবস্থা সহ)
+    // নতুন মেম্বার ক্রিয়েট করার ফাংশন
     function handleCreateMember(event) {
       if (event) event.preventDefault();
 
@@ -475,13 +479,14 @@
         return;
       }
 
-      // কেস-সেন্সিটিভ ডুপ্লিকেট চেক (যেমন: "Habib" এবং "habib" একই হিসেবে ধরবে)
+      // ডুপ্লিকেট ও ওভাররাইট রোধ করার জন্য কেস-সেন্সিটিভ চেক
       const existingKey = Object.keys(membersData).find(k => k.toLowerCase() === name.toLowerCase());
       if (existingKey) {
         alert(`"${existingKey}" নামে ইতিমধ্যেই একটি প্রোফাইল রয়েছে!`);
         return;
       }
 
+      // সবার আগে পপআপ মডাল বন্ধ করা হলো
       closeAddMemberModal();
 
       membersData[name] = {
@@ -489,11 +494,11 @@
         screenshots: []
       };
 
-      localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
+      localStorage.setItem('evidenceData_v3', JSON.stringify(membersData));
       renderBoard();
 
       if (db) {
-        db.collection("evidence_board_v2").doc(name).set(membersData[name], { merge: true })
+        db.collection("evidence_board_v3").doc(name).set(membersData[name], { merge: true })
           .catch(err => console.error("Firebase Sync issue:", err));
       }
     }
@@ -510,11 +515,11 @@
 
       if (confirm(`Are you sure you want to delete "${memberName}"?`)) {
         delete membersData[memberName];
-        localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
+        localStorage.setItem('evidenceData_v3', JSON.stringify(membersData));
         renderBoard();
 
         if (db) {
-          db.collection("evidence_board_v2").doc(memberName).delete().catch(err => console.error(err));
+          db.collection("evidence_board_v3").doc(memberName).delete().catch(err => console.error(err));
         }
       }
     }
@@ -545,13 +550,13 @@
         ssList.splice(index, 1);
         if (!Array.isArray(item)) item.screenshots = ssList;
 
-        localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
+        localStorage.setItem('evidenceData_v3', JSON.stringify(membersData));
         openEvidenceModal(memberName);
         renderBoard();
         renderEvidencePage();
 
         if (db) {
-          db.collection("evidence_board_v2").doc(memberName).set(item, { merge: true });
+          db.collection("evidence_board_v3").doc(memberName).set(item, { merge: true });
         }
       }
     }
@@ -667,13 +672,13 @@
             owner: currentUser.email
           });
 
-          localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
+          localStorage.setItem('evidenceData_v3', JSON.stringify(membersData));
           renderBoard();
           renderEvidencePage();
           closeUploadModal();
 
           if (db) {
-            db.collection("evidence_board_v2").doc(memberName).set(item, { merge: true });
+            db.collection("evidence_board_v3").doc(memberName).set(item, { merge: true });
           }
         };
         reader.readAsDataURL(fileInput.files[0]);
@@ -722,7 +727,7 @@
           const canDelete = canDeleteContent(ssOwner);
 
           gallery.innerHTML += `
-            <div class="remote group cursor-pointer" onclick="zoomImage('${src}')">
+            <div class="relative group cursor-pointer" onclick="zoomImage('${src}')">
               <img src="${src}" class="w-full h-36 object-cover rounded-xl border border-gray-700 group-hover:opacity-75 transition">
               <div class="flex justify-between items-center mt-1">
                 <span class="text-xs text-gray-400">Proof #${idx + 1}</span>
