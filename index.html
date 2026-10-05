@@ -167,8 +167,8 @@
     <button onclick="prevZoomImage()" class="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-rose-500 text-white p-3 rounded-full text-xl z-50 transition">❮</button>
     <button onclick="nextZoomImage()" class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-rose-500 text-white p-3 rounded-full text-xl z-50 transition">❯</button>
 
-    <div class="zoom-wrapper w-full h-[85vh] flex items-center justify-center relative" id="zoomWrapper">
-      <img id="zoomedImg" class="max-w-full max-h-full rounded-lg transition-transform duration-75 origin-center" src="" alt="Zoomable Image">
+    <div class="zoom-wrapper w-full h-[85vh] flex items-center justify-center relative overflow-hidden" id="zoomWrapper">
+      <img id="zoomedImg" class="max-w-full max-h-full rounded-lg cursor-grab active:cursor-grabbing origin-center" src="" alt="Zoomable Image">
     </div>
     <div id="zoomCounter" class="absolute bottom-4 text-xs text-gray-400"></div>
   </div>
@@ -196,11 +196,16 @@
     let membersData = {};
     let currentFilter = 'All';
 
-    // Variables for Zoom & Carousel
+    // Variables for Zoom & Carousel & Pan/Drag
     let currentZoomList = [];
     let currentZoomIndex = 0;
     let currentZoomMemberName = '';
     let currentScale = 1;
+    let panX = 0;
+    let panY = 0;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
 
     // Auth Listener
     auth.onAuthStateChanged(user => {
@@ -484,12 +489,14 @@
     }
     function closeEvidenceModal() { document.getElementById('evidenceModal').classList.replace('flex', 'hidden'); }
 
-    // Zoom, Scroll Zoom, Carousel Navigation
+    // Zoom, Scroll Zoom, Carousel Navigation, and Pan/Drag
     function zoomImageCollection(memberName, index) {
       currentZoomMemberName = memberName;
       currentZoomList = membersData[memberName]?.screenshots || [];
       currentZoomIndex = index;
       currentScale = 1;
+      panX = 0;
+      panY = 0;
       updateZoomView();
       document.getElementById('zoomModal').classList.replace('hidden', 'flex');
     }
@@ -498,7 +505,7 @@
       if (currentZoomList.length === 0) return;
       const img = document.getElementById('zoomedImg');
       img.src = currentZoomList[currentZoomIndex].src;
-      img.style.transform = `scale(${currentScale})`;
+      img.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
       document.getElementById('zoomCounter').innerText = `${currentZoomMemberName} (${currentZoomIndex + 1} of ${currentZoomList.length})`;
     }
 
@@ -506,6 +513,8 @@
       if (currentZoomList.length === 0) return;
       currentZoomIndex = (currentZoomIndex + 1) % currentZoomList.length;
       currentScale = 1;
+      panX = 0;
+      panY = 0;
       updateZoomView();
     }
 
@@ -513,6 +522,8 @@
       if (currentZoomList.length === 0) return;
       currentZoomIndex = (currentZoomIndex - 1 + currentZoomList.length) % currentZoomList.length;
       currentScale = 1;
+      panX = 0;
+      panY = 0;
       updateZoomView();
     }
 
@@ -529,8 +540,34 @@
         currentScale = Math.min(currentScale + 0.15, 4); // Zoom In
       } else {
         currentScale = Math.max(currentScale - 0.15, 0.5); // Zoom Out
+        if (currentScale === 1) {
+          panX = 0;
+          panY = 0;
+        }
       }
-      img.style.transform = `scale(${currentScale})`;
+      img.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
+    });
+
+    // Mouse Drag/Pan functionality
+    const zoomedImg = document.getElementById('zoomedImg');
+
+    zoomedImg.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      startX = e.clientX - panX;
+      startY = e.clientY - panY;
+      zoomedImg.style.cursor = 'grabbing';
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      panX = e.clientX - startX;
+      panY = e.clientY - startY;
+      zoomedImg.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+      zoomedImg.style.cursor = 'grab';
     });
 
     // Keyboard Arrow Navigation for Zoom
@@ -542,7 +579,7 @@
       }
     });
 
-    // Drag & Drop Setup
+    // Drag & Drop Setup for Upload
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('evidenceFile');
 
