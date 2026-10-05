@@ -51,7 +51,7 @@
         <button id="navMembers" onclick="switchTab('members')" class="px-4 py-1.5 bg-white text-black rounded-lg font-medium text-sm transition hover:-translate-y-0.5">Members</button>
         <button id="navEvidence" onclick="switchTab('evidence')" class="px-4 py-1.5 text-gray-400 hover:text-white text-sm transition hover:-translate-y-0.5">Evidence</button>
         <button onclick="openUploadModal()" class="px-4 py-1.5 text-gray-400 hover:text-white text-sm transition hover:-translate-y-0.5">Upload</button>
-        <!-- Admin Bug Reports Tab Button (Only visible to Admin) -->
+        <!-- Admin Bug Reports Tab Button -->
         <button id="navBugs" onclick="switchTab('bugs')" class="px-4 py-1.5 text-rose-400 hover:text-white text-sm transition hover:-translate-y-0.5 hidden">🐛 Bug Reports</button>
       </nav>
 
@@ -105,18 +105,18 @@
     <!-- ================= 3. ADMIN BUG REPORTS VIEW ================= -->
     <section id="bugsView" class="hidden">
       <h1 class="text-3xl font-bold mb-2">🐛 Bug Reports (Admin Only)</h1>
-      <p class="text-gray-400 mb-6">Users-দের পাঠানো বাগ ও সমস্যার তালিকা নিচে দেওয়া হলো।</p>
+      <p class="text-gray-400 mb-6">User-der pathano bug gulo niche dekhano hochhe.</p>
       <div class="space-y-4" id="bugReportsContainer">
-        <p class="text-sm text-gray-400">কোনো বাগ রিপোর্ট পাওয়া যায়নি।</p>
+        <p class="text-sm text-gray-400">Kono bug report paoa jayni.</p>
       </div>
     </section>
 
   </main>
 
-  <!-- ================= FLOATING BUG REPORT BUTTON ================= -->
-  <div class="fixed bottom-5 right-5 z-40">
-    <button onclick="openBugModal()" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2.5 rounded-full shadow-lg text-xs font-bold flex items-center space-x-2 transition hover:scale-105 border border-rose-500">
-      <span>🐛 Report Bug</span>
+  <!-- ================= FIXED BOTTOM-RIGHT BUG REPORT BUTTON ================= -->
+  <div class="fixed bottom-6 right-6 z-50">
+    <button onclick="openBugModal()" class="bg-rose-600 hover:bg-rose-700 text-white p-3.5 rounded-full shadow-2xl flex items-center justify-center transition hover:scale-110 border border-rose-400 group" title="Report a Bug">
+      <span class="text-xl">🐛</span>
     </button>
   </div>
 
@@ -124,21 +124,21 @@
   <div id="bugModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
     <div class="bg-[#181a20] max-w-md w-full rounded-2xl border border-gray-800 p-6 relative">
       <button onclick="closeBugModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl font-bold">&times;</button>
-      <h2 class="text-xl font-bold mb-1">Report a Bug / Issue</h2>
-      <p class="text-xs text-gray-400 mb-4">ওয়েবসাইটে কোনো সমস্যা বা বাগ পেলে নিচে বিস্তারিত লিখে পাঠান।</p>
+      <h2 class="text-xl font-bold mb-1">Report a Bug</h2>
+      <p class="text-xs text-gray-400 mb-4">Website e kono shomossha ba bug pele niche likhe pathan.</p>
 
       <form onsubmit="handleBugSubmit(event)" class="space-y-4">
         <div>
           <label class="block text-xs text-gray-400 mb-1">Your Name / Email (Optional)</label>
-          <input type="text" id="bugSender" class="w-full bg-[#0f1115] border border-gray-700 p-2.5 rounded-xl text-sm focus:outline-none focus:border-rose-500 text-white" placeholder="e.g. Anonymous or your email">
+          <input type="text" id="bugSender" class="w-full bg-[#0f1115] border border-gray-700 p-2.5 rounded-xl text-sm focus:outline-none focus:border-rose-500 text-white" placeholder="e.g. Your name">
         </div>
 
         <div>
           <label class="block text-xs text-gray-400 mb-1">Describe the Bug</label>
-          <textarea id="bugDescription" rows="4" class="w-full bg-[#0f1115] border border-gray-700 p-2.5 rounded-xl text-sm focus:outline-none focus:border-rose-500 text-white" placeholder="কোথায় সমস্যা হচ্ছে বিস্তারিত লিখুন..." required></textarea>
+          <textarea id="bugDescription" rows="4" class="w-full bg-[#0f1115] border border-gray-700 p-2.5 rounded-xl text-sm focus:outline-none focus:border-rose-500 text-white" placeholder="Kothay shomossha hocche bistarito likhun..." required></textarea>
         </div>
 
-        <button type="submit" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-medium transition text-sm">Submit Report</button>
+        <button type="submit" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-medium transition text-sm">Submit Bug Report</button>
       </form>
     </div>
   </div>
@@ -296,7 +296,6 @@
     }
 
     if (db) {
-      // Sync Evidence Board
       db.collection("evidence_board_v3").onSnapshot((snapshot) => {
         if (!snapshot.empty) {
           membersData = {};
@@ -314,7 +313,6 @@
         }
       });
 
-      // Sync Bug Reports (Admin view)
       db.collection("bug_reports").onSnapshot((snapshot) => {
         bugReportsData = [];
         snapshot.forEach((doc) => {
@@ -430,7 +428,6 @@
       }
     }
 
-    // Bug Report Functions
     function openBugModal() {
       document.getElementById('bugModal').classList.replace('hidden', 'flex');
     }
@@ -455,11 +452,9 @@
 
       if (db) {
         db.collection("bug_reports").add(bugData).then(() => {
-          alert("আপনার বাগ রিপোর্ট সফলভাবে জমা হয়েছে! ধন্যবাদ।");
+          alert("Bug report safolvabe pathano hoyeche!");
           closeBugModal();
         }).catch(err => alert("Error: " + err.message));
-      } else {
-        alert("Database not connected!");
       }
     }
 
@@ -468,7 +463,7 @@
       container.innerHTML = '';
 
       if (bugReportsData.length === 0) {
-        container.innerHTML = `<p class="text-sm text-gray-400">কোনো বাগ রিপোর্ট পাওয়া যায়নি।</p>`;
+        container.innerHTML = `<p class="text-sm text-gray-400">Kono bug report paoa jayni.</p>`;
         return;
       }
 
@@ -486,7 +481,7 @@
     }
 
     function deleteBug(id) {
-      if (confirm("এই রিপোর্টটি ডিলিট করতে চান?")) {
+      if (confirm("Ei report-ti delete korte chan?")) {
         if (db) {
           db.collection("bug_reports").doc(id).delete().catch(err => console.error(err));
         }
@@ -619,7 +614,6 @@
       }
     }
 
-    // Zoom, Pan & Navigation Logic
     let zoomScale = 1, translateX = 0, translateY = 0, isDragging = false, startX = 0, startY = 0;
     const img = document.getElementById('zoomedImg');
     const wrapper = document.getElementById('zoomWrapper');
@@ -699,7 +693,6 @@
       document.getElementById('zoomModal').classList.replace('flex', 'hidden');
     }
 
-    // Upload Logic
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('evidenceFile');
     const fileNameDisplay = document.getElementById('fileNameDisplay');
