@@ -298,7 +298,7 @@
         eyeIcon.innerText = '🙈';
       } else {
         passInput.type = 'password';
-        eyeIcon.innerText = '👁️️';
+        eyeIcon.innerText = '👁';
       }
     }
 
@@ -487,7 +487,7 @@
           db.collection("evidence_board_v2").doc(name).set(membersData[name], { merge: true }).catch(err => console.error("Firebase Sync issue:", err));
         }
 
-        // মডাল বন্ধ করার ফাংশন কল করা হলো যাতে সাবমিট করার সাথে সাথেই পপআপ চলে যায়
+        // মডাল বন্ধ করার ফাংশন কল করা হলো
         closeAddMemberModal();
       }
     }
