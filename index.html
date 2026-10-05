@@ -225,12 +225,8 @@
       console.log("Firebase fallback mode active.");
     }
 
-    // Data Structure
-    let membersData = JSON.parse(localStorage.getItem('evidenceData_v2')) || {
-      "PK baby": { owner: "admin@odommo.com", screenshots: [] },
-      "Modina Modina/MD": { owner: "admin@odommo.com", screenshots: [] },
-      "Chadni the Seducer": { owner: "admin@odommo.com", screenshots: [] }
-    };
+    // Data Structure - ডিফল্ট মেম্বারগুলো মুছে ফাঁকা রাখা হলো
+    let membersData = JSON.parse(localStorage.getItem('evidenceData_v2')) || {};
     let currentFilter = 'All';
 
     // Firebase Auth Listener
@@ -473,21 +469,24 @@
       const name = inputField.value.trim();
 
       if (name) {
-        // ১. সবার আগে মডাল বন্ধ করা হলো যাতে পপআপ স্ক্রিন থেকে সাথে সাথে চলে যায়
         closeAddMemberModal();
 
-        if (!membersData[name]) {
-          membersData[name] = {
-            owner: currentUser.email,
-            screenshots: []
-          };
-        }
+        try {
+          if (!membersData[name]) {
+            membersData[name] = {
+              owner: currentUser.email,
+              screenshots: []
+            };
+          }
 
-        localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
-        renderBoard();
+          localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
+          renderBoard();
 
-        if (db) {
-          db.collection("evidence_board_v2").doc(name).set(membersData[name], { merge: true }).catch(err => console.error("Firebase Sync issue:", err));
+          if (db) {
+            db.collection("evidence_board_v2").doc(name).set(membersData[name], { merge: true }).catch(err => console.error("Firebase Sync issue:", err));
+          }
+        } catch (err) {
+          console.error(err);
         }
       }
     }
