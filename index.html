@@ -224,8 +224,8 @@
       console.log("Firebase fallback mode active.");
     }
 
-    // Data Structure: Object containing items with owner email
-    let membersData = JSON.parse(localStorage.getItem('evidenceData_v2')) || {
+    // Default starting data if Firestore is empty
+    let membersData = {
       "PK baby": { owner: "admin@odommo.com", screenshots: [] },
       "Modina Modina/MD": { owner: "admin@odommo.com", screenshots: [] },
       "Chadni the Seducer": { owner: "admin@odommo.com", screenshots: [] }
@@ -244,18 +244,26 @@
       });
     }
 
-    // Firebase Firestore Sync
+    // FIX: Firebase Firestore Realtime Listener (সবার জন্য ডেটা লাইভ সিঙ্ক হবে)
     if (db) {
       db.collection("evidence_board_v2").onSnapshot((snapshot) => {
-        membersData = {};
-        snapshot.forEach((doc) => {
-          membersData[doc.id] = doc.data() || { owner: "admin@odommo.com", screenshots: [] };
-        });
-        localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
+        if (!snapshot.empty) {
+          membersData = {};
+          snapshot.forEach((doc) => {
+            membersData[doc.id] = doc.data() || { owner: "admin@odommo.com", screenshots: [] };
+          });
+        } else {
+          // যদি ডেটাবেজ একদম খালি থাকে, তবে ডিফল্ট মেম্বারগুলো আপলোড করে দেওয়া যেতে পারে
+          Object.keys(membersData).forEach(name => {
+            db.collection("evidence_board_v2").doc(name).set(membersData[name]);
+          });
+        }
         renderBoard();
         if (!document.getElementById('evidenceView').classList.contains('hidden')) {
           renderEvidencePage();
         }
+      }, (error) => {
+        console.error("Firestore sync error: ", error);
       });
     }
 
@@ -479,14 +487,13 @@
           };
         }
 
-        localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
-        renderBoard();
-
         if (db) {
-          db.collection("evidence_board_v2").doc(name).set(membersData[name], { merge: true }).catch(err => console.error("Firebase Sync issue:", err));
+          db.collection("evidence_board_v2").doc(name).set(membersData[name], { merge: true }).then(() => {
+            closeAddMemberModal();
+          }).catch(err => alert("Error saving to database: " + err.message));
+        } else {
+          closeAddMemberModal();
         }
-
-        closeAddMemberModal();
       }
     }
 
@@ -501,12 +508,11 @@
       }
 
       if (confirm(`Are you sure you want to delete "${memberName}"?`)) {
-        delete membersData[memberName];
-        localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
-        renderBoard();
-
         if (db) {
           db.collection("evidence_board_v2").doc(memberName).delete().catch(err => console.error(err));
+        } else {
+          delete membersData[memberName];
+          renderBoard();
         }
       }
     }
@@ -537,13 +543,10 @@
         ssList.splice(index, 1);
         if (!Array.isArray(item)) item.screenshots = ssList;
 
-        localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
-        openEvidenceModal(memberName);
-        renderBoard();
-        renderEvidencePage();
-
         if (db) {
-          db.collection("evidence_board_v2").doc(memberName).set(item, { merge: true });
+          db.collection("evidence_board_v2").doc(memberName).set(item, { merge: true }).then(() => {
+            openEvidenceModal(memberName);
+          });
         }
       }
     }
@@ -659,13 +662,12 @@
             owner: currentUser.email
           });
 
-          localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
-          renderBoard();
-          renderEvidencePage();
           closeUploadModal();
 
           if (db) {
-            db.collection("evidence_board_v2").doc(memberName).set(item, { merge: true });
+            db.collection("evidence_board_v2").doc(memberName).set(item, { merge: true }).catch(err => {
+              alert("Error uploading image: " + err.message);
+            });
           }
         };
         reader.readAsDataURL(fileInput.files[0]);
