@@ -185,34 +185,26 @@
     </div>
   </div>
 
-  <!-- ================= ZOOM LIGHTBOX (WITH PREV & NEXT BUTTONS) ================= -->
+  <!-- ================= ZOOM LIGHTBOX ================= -->
   <div id="zoomModal" class="fixed inset-0 bg-black/95 hidden flex-col items-center justify-center z-50 p-4">
     <span onclick="closeZoom()" class="absolute top-4 right-6 text-white text-4xl cursor-pointer hover:text-red-500 font-bold z-50">&times;</span>
     <div class="text-xs text-gray-400 absolute top-4 left-6 z-50 bg-[#181a20]/80 p-2 rounded-lg border border-gray-800">
-      💡 <b>Scroll:</b> Zoom | <b>Drag:</b> Pan | <b>← / →:</b> Prev/Next
+      💡 <b>Scroll:</b> Zoom In/Out | <b>Click & Drag:</b> Chepe dhore tene shoran
     </div>
-
-    <!-- Previous Button -->
-    <button onclick="prevImage(event)" class="absolute left-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-rose-600 text-white p-3 rounded-full text-2xl font-bold z-50 transition border border-gray-700">&#10094;</button>
-
     <div class="zoom-wrapper w-full h-[85vh] flex items-center justify-center relative" id="zoomWrapper">
       <img id="zoomedImg" class="max-w-full max-h-full rounded-lg transition-transform duration-75 origin-center pointer-events-auto" src="" alt="Zoomable Evidence" draggable="false">
     </div>
-
-    <!-- Next Button -->
-    <button onclick="nextImage(event)" class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-rose-600 text-white p-3 rounded-full text-2xl font-bold z-50 transition border border-gray-700">&#10095;</button>
   </div>
 
   <script>
-    // Firebase Config (Correctly configured with your project details)
+    // Firebase Config
     const firebaseConfig = {
-      apiKey: "AIzaSyCzuv5iuPCF3mAeAN2d0VmZVEsMlFivKaQ",
-      authDomain: "adommo-24297.firebaseapp.com",
-      projectId: "adommo-24297",
-      storageBucket: "adommo-24297.firebasestorage.app",
-      messagingSenderId: "1059800003803",
-      appId: "1:1059800003803:web:8e8895224d00f0566548fe",
-      measurementId: "G-8H1CYXTZX2"
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
     };
 
     const ADMIN_EMAIL = "habibahsan0193@gmail.com";
@@ -223,25 +215,22 @@
     let authMode = 'login';
 
     try {
-      if (firebaseConfig.apiKey) {
+      if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
         auth = firebase.auth();
       }
     } catch(e) {
-      console.log("Firebase init error:", e);
+      console.log("Firebase fallback mode active.");
     }
 
-    let membersData = {
+    // Data Structure: Object containing items with owner email
+    let membersData = JSON.parse(localStorage.getItem('evidenceData_v2')) || {
       "PK baby": { owner: "admin@odommo.com", screenshots: [] },
       "Modina Modina/MD": { owner: "admin@odommo.com", screenshots: [] },
       "Chadni the Seducer": { owner: "admin@odommo.com", screenshots: [] }
     };
     let currentFilter = 'All';
-
-    // Global gallery list & index for navigation
-    let currentGalleryList = [];
-    let currentGalleryIndex = 0;
 
     // Firebase Auth Listener
     if (auth) {
@@ -255,26 +244,18 @@
       });
     }
 
-    // Firebase Firestore Realtime Sync (Live for everyone)
+    // Firebase Firestore Sync
     if (db) {
-      db.collection("evidence_board_v3").onSnapshot((snapshot) => {
-        if (!snapshot.empty) {
-          membersData = {};
-          snapshot.forEach((doc) => {
-            membersData[doc.id] = doc.data() || { owner: "admin@odommo.com", screenshots: [] };
-          });
-        } else {
-          // Push initial defaults if empty
-          Object.keys(membersData).forEach(name => {
-            db.collection("evidence_board_v3").doc(name).set(membersData[name]);
-          });
-        }
+      db.collection("evidence_board_v2").onSnapshot((snapshot) => {
+        membersData = {};
+        snapshot.forEach((doc) => {
+          membersData[doc.id] = doc.data() || { owner: "admin@odommo.com", screenshots: [] };
+        });
+        localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
         renderBoard();
         if (!document.getElementById('evidenceView').classList.contains('hidden')) {
           renderEvidencePage();
         }
-      }, (error) => {
-        console.error("Firestore sync error: ", error);
       });
     }
 
@@ -332,11 +313,22 @@
         } else {
           auth.createUserWithEmailAndPassword(email, pass).then(() => closeAuthModal()).catch(err => alert(err.message));
         }
+      } else {
+        currentUser = { email: email };
+        updateAuthHeaderUI();
+        renderBoard();
+        closeAuthModal();
       }
     }
 
     function logoutUser() {
-      if (auth) auth.signOut();
+      if (auth) {
+        auth.signOut();
+      } else {
+        currentUser = null;
+        updateAuthHeaderUI();
+        renderBoard();
+      }
     }
 
     function switchTab(tab) {
@@ -376,7 +368,7 @@
         const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
         const canDelete = canDeleteContent(ownerEmail);
 
-        container.innerHTML += `
+        const cardHTML = `
           <div class="bg-[#181a20] p-5 rounded-2xl border border-gray-800 flex flex-col justify-between card-hover-lift group relative">
             ${canDelete ? `<button onclick="deleteMember('${name}', event)" title="Delete Member" class="absolute top-4 right-4 text-xs text-gray-500 hover:text-red-400 p-1 transition-transform hover:scale-125">🗑️</button>` : ''}
             <div class="flex items-center space-x-3 mb-3">
@@ -392,6 +384,7 @@
             </div>
           </div>
         `;
+        container.innerHTML += cardHTML;
       });
 
       document.getElementById('totalMembersCount').innerText = memberNames.length;
@@ -406,15 +399,9 @@
       grid.innerHTML = '';
 
       let totalSS = 0;
-      let allSources = [];
-
-      Object.keys(membersData).forEach(memberName => {
-        const item = membersData[memberName];
-        const ssList = Array.isArray(item) ? item : (item.screenshots || []);
-        ssList.forEach(ssObj => {
-          allSources.push(typeof ssObj === 'string' ? ssObj : ssObj.src);
-        });
-        totalSS += ssList.length;
+      Object.values(membersData).forEach(item => {
+        const list = Array.isArray(item) ? item : (item.screenshots || []);
+        totalSS += list.length;
       });
 
       const filterList = ['All', ...Object.keys(membersData)];
@@ -439,9 +426,6 @@
       });
 
       let hasScreenshots = false;
-      let globalIndex = 0;
-      currentGalleryList = [];
-
       Object.keys(membersData).forEach(memberName => {
         if (currentFilter === 'All' || currentFilter === memberName) {
           const item = membersData[memberName];
@@ -450,15 +434,11 @@
           ssList.forEach((ssObj, idx) => {
             hasScreenshots = true;
             const src = typeof ssObj === 'string' ? ssObj : ssObj.src;
-            currentGalleryList.push(src);
-            const currentIdx = globalIndex;
-            globalIndex++;
-
             const ssOwner = typeof ssObj === 'string' ? (item.owner || 'admin@odommo.com') : (ssObj.owner || item.owner || 'admin@odommo.com');
             const canDelete = canDeleteContent(ssOwner);
 
             grid.innerHTML += `
-              <div class="relative group cursor-pointer bg-[#181a20] p-2 rounded-2xl border border-gray-800 card-hover-lift" onclick="zoomImageByIndex(${currentIdx})">
+              <div class="relative group cursor-pointer bg-[#181a20] p-2 rounded-2xl border border-gray-800 card-hover-lift" onclick="zoomImage('${src}')">
                 <img src="${src}" class="w-full h-44 object-cover rounded-xl group-hover:opacity-75 transition">
                 <div class="flex justify-between items-center mt-2 px-1">
                   <span class="text-xs font-semibold text-gray-300 truncate max-w-[70%] group-hover:text-rose-400 transition-colors">${memberName}</span>
@@ -499,11 +479,14 @@
           };
         }
 
+        localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
+        renderBoard();
+
         if (db) {
-          db.collection("evidence_board_v3").doc(name).set(membersData[name], { merge: true }).then(() => {
-            closeAddMemberModal();
-          }).catch(err => alert("Error: " + err.message));
+          db.collection("evidence_board_v2").doc(name).set(membersData[name], { merge: true }).catch(err => console.error("Firebase Sync issue:", err));
         }
+
+        closeAddMemberModal();
       }
     }
 
@@ -518,8 +501,12 @@
       }
 
       if (confirm(`Are you sure you want to delete "${memberName}"?`)) {
+        delete membersData[memberName];
+        localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
+        renderBoard();
+
         if (db) {
-          db.collection("evidence_board_v3").doc(memberName).delete().catch(err => console.error(err));
+          db.collection("evidence_board_v2").doc(memberName).delete().catch(err => console.error(err));
         }
       }
     }
@@ -550,15 +537,18 @@
         ssList.splice(index, 1);
         if (!Array.isArray(item)) item.screenshots = ssList;
 
+        localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
+        openEvidenceModal(memberName);
+        renderBoard();
+        renderEvidencePage();
+
         if (db) {
-          db.collection("evidence_board_v3").doc(memberName).set(item, { merge: true }).then(() => {
-            openEvidenceModal(memberName);
-          });
+          db.collection("evidence_board_v2").doc(memberName).set(item, { merge: true });
         }
       }
     }
 
-    // Zoom & Pan & Navigation (Prev / Next) Logic
+    // Zoom & Drag Logic
     let zoomScale = 1, translateX = 0, translateY = 0, isMouseDown = false, startX = 0, startY = 0;
     const img = document.getElementById('zoomedImg');
     const wrapper = document.getElementById('zoomWrapper');
@@ -599,45 +589,12 @@
       wrapper.classList.remove('dragging');
     });
 
-    // Keyboard support for Next / Prev
-    window.addEventListener('keydown', function(e) {
-      const zoomModal = document.getElementById('zoomModal');
-      if (!zoomModal.classList.contains('hidden')) {
-        if (e.key === 'ArrowRight') {
-          nextImage(e);
-        } else if (e.key === 'ArrowLeft') {
-          prevImage(e);
-        } else if (e.key === 'Escape') {
-          closeZoom();
-        }
-      }
-    });
-
-    function zoomImageByIndex(index) {
-      currentGalleryIndex = index;
-      zoomScale = 1; translateX = 0; translateY = 0;
+    function zoomImage(imageSrc) {
+      zoomScale = 1; translateX = 0; translateY = 0; isMouseDown = false;
       updateTransform();
-      img.src = currentGalleryList[currentGalleryIndex];
+      img.src = imageSrc;
       document.getElementById('zoomModal').classList.remove('hidden');
       document.getElementById('zoomModal').classList.add('flex');
-    }
-
-    function nextImage(e) {
-      e.stopPropagation();
-      if (currentGalleryList.length === 0) return;
-      currentGalleryIndex = (currentGalleryIndex + 1) % currentGalleryList.length;
-      zoomScale = 1; translateX = 0; translateY = 0;
-      updateTransform();
-      img.src = currentGalleryList[currentGalleryIndex];
-    }
-
-    function prevImage(e) {
-      e.stopPropagation();
-      if (currentGalleryList.length === 0) return;
-      currentGalleryIndex = (currentGalleryIndex - 1 + currentGalleryList.length) % currentGalleryList.length;
-      zoomScale = 1; translateX = 0; translateY = 0;
-      updateTransform();
-      img.src = currentGalleryList[currentGalleryIndex];
     }
 
     function closeZoom() {
@@ -702,12 +659,13 @@
             owner: currentUser.email
           });
 
+          localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
+          renderBoard();
+          renderEvidencePage();
           closeUploadModal();
 
           if (db) {
-            db.collection("evidence_board_v3").doc(memberName).set(item, { merge: true }).catch(err => {
-              alert("Error uploading image: " + err.message);
-            });
+            db.collection("evidence_board_v2").doc(memberName).set(item, { merge: true });
           }
         };
         reader.readAsDataURL(fileInput.files[0]);
@@ -749,12 +707,6 @@
       const item = membersData[memberName];
       const ssList = Array.isArray(item) ? item : (item ? item.screenshots || [] : []);
 
-      // Build local list for member popup modal too if needed, or link via index
-      currentGalleryList = [];
-      ssList.forEach(ssObj => {
-        currentGalleryList.push(typeof ssObj === 'string' ? ssObj : ssObj.src);
-      });
-
       if (ssList.length > 0) {
         ssList.forEach((ssObj, idx) => {
           const src = typeof ssObj === 'string' ? ssObj : ssObj.src;
@@ -762,7 +714,7 @@
           const canDelete = canDeleteContent(ssOwner);
 
           gallery.innerHTML += `
-            <div class="relative group cursor-pointer" onclick="zoomImageByIndex(${idx})">
+            <div class="relative group cursor-pointer" onclick="zoomImage('${src}')">
               <img src="${src}" class="w-full h-36 object-cover rounded-xl border border-gray-700 group-hover:opacity-75 transition">
               <div class="flex justify-between items-center mt-1">
                 <span class="text-xs text-gray-400">Proof #${idx + 1}</span>
