@@ -6,7 +6,7 @@
   <title>Odommo Batch · Evidence Board (Auth)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Firebase SDKs -->
+  <!-- Firebase SDKs (Compat v9) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
@@ -197,14 +197,15 @@
   </div>
 
   <script>
-    // Firebase Config
+    // Firebase Config (Updated with your project details)
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "SENDER_ID",
-      appId: "APP_ID"
+      apiKey: "AIzaSyCzuv5iuPCF3mAeAN2d0VmZVEsMlFivKaQ",
+      authDomain: "adommo-24297.firebaseapp.com",
+      projectId: "adommo-24297",
+      storageBucket: "adommo-24297.firebasestorage.app",
+      messagingSenderId: "1059800003803",
+      appId: "1:1059800003803:web:8e8895224d00f0566548fe",
+      measurementId: "G-8H1CYXTZX2"
     };
 
     const ADMIN_EMAIL = "habibahsan0193@gmail.com";
@@ -224,7 +225,7 @@
       console.log("Firebase fallback mode active.");
     }
 
-    // Data Structure: Object containing items with owner email
+    // Data Structure
     let membersData = JSON.parse(localStorage.getItem('evidenceData_v2')) || {
       "PK baby": { owner: "admin@odommo.com", screenshots: [] },
       "Modina Modina/MD": { owner: "admin@odommo.com", screenshots: [] },
@@ -244,7 +245,7 @@
       });
     }
 
-    // Firebase Firestore Sync
+    // Firebase Firestore Sync (Real-time update)
     if (db) {
       db.collection("evidence_board_v2").onSnapshot((snapshot) => {
         membersData = {};
@@ -370,7 +371,7 @@
 
         const cardHTML = `
           <div class="bg-[#181a20] p-5 rounded-2xl border border-gray-800 flex flex-col justify-between card-hover-lift group relative">
-            ${canDelete ? `<button onclick="deleteMember('${name}', event)" title="Delete Member" class="absolute top-4 right-4 text-xs text-gray-500 hover:text-red-400 p-1 transition-transform hover:scale-125">🗑️</button>` : ''}
+            ${canDelete ? `<button onclick="deleteMember('${name}', event)" title="Delete Member" class="absolute top-4 right-4 text-xs text-gray-500 hover:text-red-400 p-1 transition-transform hover:scale-125">🗑️️</button>` : ''}
             <div class="flex items-center space-x-3 mb-3">
               <span class="w-10 h-10 flex items-center justify-center rounded-full bg-rose-900/50 text-rose-400 font-bold group-hover:scale-110 transition-transform">${initials}</span>
               <div>
