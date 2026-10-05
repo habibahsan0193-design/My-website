@@ -16,6 +16,7 @@
       overflow: hidden;
       cursor: grab;
       user-select: none;
+      touch-action: none;
     }
     .zoom-wrapper.dragging {
       cursor: grabbing;
@@ -185,18 +186,18 @@
     </div>
   </div>
 
-  <!-- ================= ZOOM LIGHTBOX (WITH PAN & NAVIGATION) ================= -->
+  <!-- ================= ZOOM LIGHTBOX (FIXED PAN & ZOOM) ================= -->
   <div id="zoomModal" class="fixed inset-0 bg-black/95 hidden flex-col items-center justify-center z-50 p-4">
     <span onclick="closeZoom()" class="absolute top-4 right-6 text-white text-4xl cursor-pointer hover:text-red-500 font-bold z-50">&times;</span>
     <div class="text-xs text-gray-400 absolute top-4 left-6 z-50 bg-[#181a20]/80 p-2 rounded-lg border border-gray-800">
-      💡 <b>Scroll:</b> Zoom | <b>Click & Drag:</b> Move Image | <b>← / →:</b> Prev/Next
+      💡 <b>Scroll:</b> Zoom In/Out | <b>Click & Drag:</b> Move Image Up/Down | <b>← / →:</b> Prev/Next
     </div>
 
     <!-- Previous Button -->
     <button onclick="prevImage(event)" class="absolute left-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-rose-600 text-white p-3 rounded-full text-2xl font-bold z-50 transition border border-gray-700">&#10094;</button>
 
     <div class="zoom-wrapper w-full h-[85vh] flex items-center justify-center relative" id="zoomWrapper">
-      <img id="zoomedImg" class="max-w-full max-h-full rounded-lg transition-transform duration-75 origin-center" src="" alt="Zoomable Evidence" draggable="false">
+      <img id="zoomedImg" class="max-w-full max-h-full rounded-lg transition-transform duration-75 origin-center cursor-grab active:cursor-grabbing" src="" alt="Zoomable Evidence" draggable="false">
     </div>
 
     <!-- Next Button -->
@@ -477,7 +478,7 @@
       }
     }
 
-    // Zoom, Pan (Drag) & Navigation Logic FIXED
+    // Zoom, Pan & Navigation Logic Fixed
     let zoomScale = 1, translateX = 0, translateY = 0, isDragging = false, startX = 0, startY = 0;
     const img = document.getElementById('zoomedImg');
     const wrapper = document.getElementById('zoomWrapper');
@@ -489,16 +490,16 @@
     wrapper.addEventListener('wheel', function(e) {
       e.preventDefault();
       if (e.deltaY < 0) {
-        zoomScale = Math.min(zoomScale + 0.2, 4); // Max zoom 4x
+        zoomScale = Math.min(zoomScale + 0.3, 5); // Max zoom 5x
       } else {
-        zoomScale = Math.max(1, zoomScale - 0.2); // Min zoom 1x
+        zoomScale = Math.max(1, zoomScale - 0.3); // Min zoom 1x
         if (zoomScale === 1) { translateX = 0; translateY = 0; }
       }
       updateTransform();
     });
 
     wrapper.addEventListener('mousedown', function(e) {
-      if (e.button !== 0 || zoomScale <= 1) return; // Only drag when zoomed in
+      if (e.button !== 0) return;
       isDragging = true;
       startX = e.clientX - translateX;
       startY = e.clientY - translateY;
