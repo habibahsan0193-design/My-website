@@ -16,7 +16,6 @@
       overflow: hidden;
       cursor: grab;
       user-select: none;
-      touch-action: none;
     }
     .zoom-wrapper.dragging {
       cursor: grabbing;
@@ -35,7 +34,7 @@
     }
   </style>
 </head>
-<body class="bg-[#0f1115] text-white p-6 font-sans">
+<body class="bg-[#0f1115] text-white p-6 font-sans pb-20">
 
   <!-- Header / Navbar -->
   <header class="flex flex-wrap justify-between items-center max-w-6xl mx-auto mb-10 gap-4">
@@ -52,6 +51,8 @@
         <button id="navMembers" onclick="switchTab('members')" class="px-4 py-1.5 bg-white text-black rounded-lg font-medium text-sm transition hover:-translate-y-0.5">Members</button>
         <button id="navEvidence" onclick="switchTab('evidence')" class="px-4 py-1.5 text-gray-400 hover:text-white text-sm transition hover:-translate-y-0.5">Evidence</button>
         <button onclick="openUploadModal()" class="px-4 py-1.5 text-gray-400 hover:text-white text-sm transition hover:-translate-y-0.5">Upload</button>
+        <!-- Admin Bug Reports Tab Button (Only visible to Admin) -->
+        <button id="navBugs" onclick="switchTab('bugs')" class="px-4 py-1.5 text-rose-400 hover:text-white text-sm transition hover:-translate-y-0.5 hidden">🐛 Bug Reports</button>
       </nav>
 
       <!-- Auth Action Button (Header) -->
@@ -101,7 +102,46 @@
       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="allEvidenceGrid"></div>
     </section>
 
+    <!-- ================= 3. ADMIN BUG REPORTS VIEW ================= -->
+    <section id="bugsView" class="hidden">
+      <h1 class="text-3xl font-bold mb-2">🐛 Bug Reports (Admin Only)</h1>
+      <p class="text-gray-400 mb-6">Users-দের পাঠানো বাগ ও সমস্যার তালিকা নিচে দেওয়া হলো।</p>
+      <div class="space-y-4" id="bugReportsContainer">
+        <p class="text-sm text-gray-400">কোনো বাগ রিপোর্ট পাওয়া যায়নি।</p>
+      </div>
+    </section>
+
   </main>
+
+  <!-- ================= FLOATING BUG REPORT BUTTON ================= -->
+  <div class="fixed bottom-5 right-5 z-40">
+    <button onclick="openBugModal()" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2.5 rounded-full shadow-lg text-xs font-bold flex items-center space-x-2 transition hover:scale-105 border border-rose-500">
+      <span>🐛 Report Bug</span>
+    </button>
+  </div>
+
+  <!-- ================= BUG REPORT MODAL ================= -->
+  <div id="bugModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
+    <div class="bg-[#181a20] max-w-md w-full rounded-2xl border border-gray-800 p-6 relative">
+      <button onclick="closeBugModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl font-bold">&times;</button>
+      <h2 class="text-xl font-bold mb-1">Report a Bug / Issue</h2>
+      <p class="text-xs text-gray-400 mb-4">ওয়েবসাইটে কোনো সমস্যা বা বাগ পেলে নিচে বিস্তারিত লিখে পাঠান।</p>
+
+      <form onsubmit="handleBugSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Your Name / Email (Optional)</label>
+          <input type="text" id="bugSender" class="w-full bg-[#0f1115] border border-gray-700 p-2.5 rounded-xl text-sm focus:outline-none focus:border-rose-500 text-white" placeholder="e.g. Anonymous or your email">
+        </div>
+
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Describe the Bug</label>
+          <textarea id="bugDescription" rows="4" class="w-full bg-[#0f1115] border border-gray-700 p-2.5 rounded-xl text-sm focus:outline-none focus:border-rose-500 text-white" placeholder="কোথায় সমস্যা হচ্ছে বিস্তারিত লিখুন..." required></textarea>
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-medium transition text-sm">Submit Report</button>
+      </form>
+    </div>
+  </div>
 
   <!-- ================= AUTH MODAL (LOGIN / SIGN UP) ================= -->
   <div id="authModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
@@ -186,11 +226,11 @@
     </div>
   </div>
 
-  <!-- ================= ZOOM LIGHTBOX (FIXED PAN & ZOOM) ================= -->
+  <!-- ================= ZOOM LIGHTBOX (WITH PAN & NAVIGATION) ================= -->
   <div id="zoomModal" class="fixed inset-0 bg-black/95 hidden flex-col items-center justify-center z-50 p-4">
     <span onclick="closeZoom()" class="absolute top-4 right-6 text-white text-4xl cursor-pointer hover:text-red-500 font-bold z-50">&times;</span>
     <div class="text-xs text-gray-400 absolute top-4 left-6 z-50 bg-[#181a20]/80 p-2 rounded-lg border border-gray-800">
-      💡 <b>Scroll:</b> Zoom In/Out | <b>Click & Drag:</b> Move Image Up/Down | <b>← / →:</b> Prev/Next
+      💡 <b>Scroll:</b> Zoom | <b>Click & Drag:</b> Move Image | <b>← / →:</b> Prev/Next
     </div>
 
     <!-- Previous Button -->
@@ -237,6 +277,7 @@
       "Modina Modina/MD": { owner: "admin@odommo.com", screenshots: [] },
       "Chadni the Seducer": { owner: "admin@odommo.com", screenshots: [] }
     };
+    let bugReportsData = [];
     let currentFilter = 'All';
 
     let currentGalleryList = [];
@@ -247,6 +288,7 @@
         currentUser = user;
         updateAuthHeaderUI();
         renderBoard();
+        checkAdminNav();
         if (!document.getElementById('evidenceView').classList.contains('hidden')) {
           renderEvidencePage();
         }
@@ -254,6 +296,7 @@
     }
 
     if (db) {
+      // Sync Evidence Board
       db.collection("evidence_board_v3").onSnapshot((snapshot) => {
         if (!snapshot.empty) {
           membersData = {};
@@ -270,6 +313,17 @@
           renderEvidencePage();
         }
       });
+
+      // Sync Bug Reports (Admin view)
+      db.collection("bug_reports").onSnapshot((snapshot) => {
+        bugReportsData = [];
+        snapshot.forEach((doc) => {
+          bugReportsData.push({ id: doc.id, ...doc.data() });
+        });
+        if (checkIsAdmin() && !document.getElementById('bugsView').classList.contains('hidden')) {
+          renderBugsPage();
+        }
+      });
     }
 
     function checkIsAdmin() {
@@ -277,6 +331,15 @@
       const userMail = currentUser.email.toLowerCase().trim();
       const adminMail = ADMIN_EMAIL.toLowerCase().trim();
       return userMail === adminMail || userMail.startsWith(adminMail.split('@')[0]);
+    }
+
+    function checkAdminNav() {
+      const bugNavBtn = document.getElementById('navBugs');
+      if (checkIsAdmin()) {
+        bugNavBtn.classList.remove('hidden');
+      } else {
+        bugNavBtn.classList.add('hidden');
+      }
     }
 
     function canDeleteContent(ownerEmail) {
@@ -299,6 +362,7 @@
       } else {
         container.innerHTML = `<button onclick="openAuthModal()" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold transition">Login / Sign Up</button>`;
       }
+      checkAdminNav();
     }
 
     function togglePasswordVisibility() {
@@ -335,20 +399,97 @@
     function switchTab(tab) {
       const membersView = document.getElementById('membersView');
       const evidenceView = document.getElementById('evidenceView');
+      const bugsView = document.getElementById('bugsView');
       const navMembers = document.getElementById('navMembers');
       const navEvidence = document.getElementById('navEvidence');
+      const navBugs = document.getElementById('navBugs');
+
+      membersView.classList.add('hidden');
+      evidenceView.classList.add('hidden');
+      bugsView.classList.add('hidden');
+      navMembers.className = "px-4 py-1.5 text-gray-400 hover:text-white text-sm transition";
+      navEvidence.className = "px-4 py-1.5 text-gray-400 hover:text-white text-sm transition";
+      if(navBugs) navBugs.className = "px-4 py-1.5 text-rose-400 hover:text-white text-sm transition";
 
       if (tab === 'members') {
         membersView.classList.remove('hidden');
-        evidenceView.classList.add('hidden');
-        navMembers.className = "px-4 py-1.5 bg-white text-black rounded-lg font-medium text-sm transition hover:-translate-y-0.5";
-        navEvidence.className = "px-4 py-1.5 text-gray-400 hover:text-white text-sm transition hover:-translate-y-0.5";
-      } else {
-        membersView.classList.add('hidden');
+        navMembers.className = "px-4 py-1.5 bg-white text-black rounded-lg font-medium text-sm transition";
+      } else if (tab === 'evidence') {
         evidenceView.classList.remove('hidden');
-        navEvidence.className = "px-4 py-1.5 bg-white text-black rounded-lg font-medium text-sm transition hover:-translate-y-0.5";
-        navMembers.className = "px-4 py-1.5 text-gray-400 hover:text-white text-sm transition hover:-translate-y-0.5";
+        navEvidence.className = "px-4 py-1.5 bg-white text-black rounded-lg font-medium text-sm transition";
         renderEvidencePage();
+      } else if (tab === 'bugs') {
+        if (!checkIsAdmin()) {
+          alert("Unauthorized access!");
+          switchTab('members');
+          return;
+        }
+        bugsView.classList.remove('hidden');
+        navBugs.className = "px-4 py-1.5 bg-rose-600 text-white rounded-lg font-medium text-sm transition";
+        renderBugsPage();
+      }
+    }
+
+    // Bug Report Functions
+    function openBugModal() {
+      document.getElementById('bugModal').classList.replace('hidden', 'flex');
+    }
+    function closeBugModal() {
+      document.getElementById('bugModal').classList.replace('flex', 'hidden');
+      document.getElementById('bugDescription').value = '';
+      document.getElementById('bugSender').value = '';
+    }
+
+    function handleBugSubmit(e) {
+      e.preventDefault();
+      const sender = document.getElementById('bugSender').value.trim() || (currentUser ? currentUser.email : "Anonymous");
+      const desc = document.getElementById('bugDescription').value.trim();
+
+      if (!desc) return;
+
+      const bugData = {
+        sender: sender,
+        description: desc,
+        time: new Date().toLocaleString()
+      };
+
+      if (db) {
+        db.collection("bug_reports").add(bugData).then(() => {
+          alert("আপনার বাগ রিপোর্ট সফলভাবে জমা হয়েছে! ধন্যবাদ।");
+          closeBugModal();
+        }).catch(err => alert("Error: " + err.message));
+      } else {
+        alert("Database not connected!");
+      }
+    }
+
+    function renderBugsPage() {
+      const container = document.getElementById('bugReportsContainer');
+      container.innerHTML = '';
+
+      if (bugReportsData.length === 0) {
+        container.innerHTML = `<p class="text-sm text-gray-400">কোনো বাগ রিপোর্ট পাওয়া যায়নি।</p>`;
+        return;
+      }
+
+      bugReportsData.forEach((bug) => {
+        container.innerHTML += `
+          <div class="bg-[#181a20] p-4 rounded-2xl border border-gray-800 flex justify-between items-start">
+            <div>
+              <p class="text-xs text-rose-400 font-semibold mb-1">From: ${bug.sender} <span class="text-gray-500 font-normal">(${bug.time})</span></p>
+              <p class="text-sm text-gray-200 whitespace-pre-line">${bug.description}</p>
+            </div>
+            <button onclick="deleteBug('${bug.id}')" class="text-xs text-red-400 hover:text-red-300 ml-4 p-1">🗑️ Delete</button>
+          </div>
+        `;
+      });
+    }
+
+    function deleteBug(id) {
+      if (confirm("এই রিপোর্টটি ডিলিট করতে চান?")) {
+        if (db) {
+          db.collection("bug_reports").doc(id).delete().catch(err => console.error(err));
+        }
       }
     }
 
@@ -478,7 +619,7 @@
       }
     }
 
-    // Zoom, Pan & Navigation Logic Fixed
+    // Zoom, Pan & Navigation Logic
     let zoomScale = 1, translateX = 0, translateY = 0, isDragging = false, startX = 0, startY = 0;
     const img = document.getElementById('zoomedImg');
     const wrapper = document.getElementById('zoomWrapper');
@@ -490,9 +631,9 @@
     wrapper.addEventListener('wheel', function(e) {
       e.preventDefault();
       if (e.deltaY < 0) {
-        zoomScale = Math.min(zoomScale + 0.3, 5); // Max zoom 5x
+        zoomScale = Math.min(zoomScale + 0.3, 5);
       } else {
-        zoomScale = Math.max(1, zoomScale - 0.3); // Min zoom 1x
+        zoomScale = Math.max(1, zoomScale - 0.3);
         if (zoomScale === 1) { translateX = 0; translateY = 0; }
       }
       updateTransform();
