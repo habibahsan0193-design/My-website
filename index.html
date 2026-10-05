@@ -225,8 +225,8 @@
       console.log("Firebase fallback mode active.");
     }
 
-    // Data Structure - ডিফল্ট কোনো নাম রাখা হয়নি, একদম খালি রাখা হয়েছে
-    let membersData = JSON.parse(localStorage.getItem('evidenceData_v3')) || {};
+    // Data Structure - নতুন কালেকশন ভার্সন v4 ব্যবহার করা হলো
+    let membersData = JSON.parse(localStorage.getItem('evidenceData_v4')) || {};
     let currentFilter = 'All';
 
     // Firebase Auth Listener
@@ -243,15 +243,20 @@
 
     // Firebase Firestore Sync (Real-time update)
     if (db) {
-      db.collection("evidence_board_v3").onSnapshot((snapshot) => {
+      db.collection("evidence_board_v4").onSnapshot((snapshot) => {
         const remoteData = {};
         snapshot.forEach((doc) => {
-          remoteData[doc.id] = doc.data() || { owner: "admin@odommo.com", screenshots: [] };
+          const docData = doc.data();
+          // মূল নাম দিয়ে ডেটা ম্যাপ করা যাতে ওভাররাইট না হয়
+          const realName = docData.name || doc.id;
+          remoteData[realName] = {
+            owner: docData.owner || "admin@odommo.com",
+            screenshots: docData.screenshots || []
+          };
         });
         
-        // লোকাল ডেটার সাথে রিমোট ডেটা সিংক্রোনাইজ করা
         membersData = remoteData;
-        localStorage.setItem('evidenceData_v3', JSON.stringify(membersData));
+        localStorage.setItem('evidenceData_v4', JSON.stringify(membersData));
         
         renderBoard();
         if (!document.getElementById('evidenceView').classList.contains('hidden')) {
@@ -371,7 +376,7 @@
 
         const cardHTML = `
           <div class="bg-[#181a20] p-5 rounded-2xl border border-gray-800 flex flex-col justify-between card-hover-lift group relative">
-            ${canDelete ? `<button onclick="deleteMember('${name}', event)" title="Delete Member" class="absolute top-4 right-4 text-xs text-gray-500 hover:text-red-400 p-1 transition-transform hover:scale-125">🗑</button>` : ''}
+            ${canDelete ? `<button onclick="deleteMember('${name.replace(/'/g, "\\'")}', event)" title="Delete Member" class="absolute top-4 right-4 text-xs text-gray-500 hover:text-red-400 p-1 transition-transform hover:scale-125">🗑</button>` : ''}
             <div class="flex items-center space-x-3 mb-3">
               <span class="w-10 h-10 flex items-center justify-center rounded-full bg-rose-900/50 text-rose-400 font-bold group-hover:scale-110 transition-transform">${initials}</span>
               <div>
@@ -380,8 +385,8 @@
               </div>
             </div>
             <div class="flex space-x-2 mt-4">
-              <button onclick="openEvidenceModal('${name}')" class="w-1/2 py-2 text-sm bg-[#22252e] hover:bg-gray-700 rounded-xl transition-all duration-200 hover:-translate-y-0.5">View evidence</button>
-              <button onclick="openUploadModal('${name}')" class="w-1/2 py-2 text-sm bg-[#f43f5e] hover:bg-rose-600 text-white rounded-xl font-medium transition-all duration-200 hover:-translate-y-0.5">Add evidence</button>
+              <button onclick="openEvidenceModal('${name.replace(/'/g, "\\'")}')" class="w-1/2 py-2 text-sm bg-[#22252e] hover:bg-gray-700 rounded-xl transition-all duration-200 hover:-translate-y-0.5">View evidence</button>
+              <button onclick="openUploadModal('${name.replace(/'/g, "\\'")}')" class="w-1/2 py-2 text-sm bg-[#f43f5e] hover:bg-rose-600 text-white rounded-xl font-medium transition-all duration-200 hover:-translate-y-0.5">Add evidence</button>
             </div>
           </div>
         `;
@@ -420,7 +425,7 @@
           : "bg-[#181a20] text-gray-400 hover:text-white border border-gray-800";
 
         filterContainer.innerHTML += `
-          <button onclick="setFilter('${name}')" class="px-4 py-2 rounded-full text-sm transition-all duration-200 hover:-translate-y-0.5 ${activeClass}">
+          <button onclick="setFilter('${name.replace(/'/g, "\\'")}')" class="px-4 py-2 rounded-full text-sm transition-all duration-200 hover:-translate-y-0.5 ${activeClass}">
             ${name} ${name === 'All' ? `(${count})` : ''}
           </button>
         `;
@@ -443,7 +448,7 @@
                 <img src="${src}" class="w-full h-44 object-cover rounded-xl group-hover:opacity-75 transition">
                 <div class="flex justify-between items-center mt-2 px-1">
                   <span class="text-xs font-semibold text-gray-300 truncate max-w-[70%] group-hover:text-rose-400 transition-colors">${memberName}</span>
-                  ${canDelete ? `<button onclick="deleteEvidence('${memberName}',${idx}, event)" class="text-xs text-red-400 hover:text-red-300 transition-transform hover:scale-125">🗑️</button>` : ''}
+                  ${canDelete ? `<button onclick="deleteEvidence('${memberName.replace(/'/g, "\\'")}',${idx}, event)" class="text-xs text-red-400 hover:text-red-300 transition-transform hover:scale-125">🗑️</button>` : ''}
                 </div>
               </div>
             `;
@@ -461,7 +466,7 @@
       renderEvidencePage();
     }
 
-    // নতুন মেম্বার ক্রিয়েট করার ফাংশন
+    // নতুন মেম্বার ক্রিয়েট করার ফাংশন (সেফ ইউনিক আইডি সহ)
     function handleCreateMember(event) {
       if (event) event.preventDefault();
 
@@ -479,14 +484,13 @@
         return;
       }
 
-      // ডুপ্লিকেট ও ওভাররাইট রোধ করার জন্য কেস-সেন্সিটিভ চেক
+      // কেস-সেন্সিটিভ ডুপ্লিকেট চেক
       const existingKey = Object.keys(membersData).find(k => k.toLowerCase() === name.toLowerCase());
       if (existingKey) {
         alert(`"${existingKey}" নামে ইতিমধ্যেই একটি প্রোফাইল রয়েছে!`);
         return;
       }
 
-      // সবার আগে পপআপ মডাল বন্ধ করা হলো
       closeAddMemberModal();
 
       membersData[name] = {
@@ -494,12 +498,18 @@
         screenshots: []
       };
 
-      localStorage.setItem('evidenceData_v3', JSON.stringify(membersData));
+      localStorage.setItem('evidenceData_v4', JSON.stringify(membersData));
       renderBoard();
 
       if (db) {
-        db.collection("evidence_board_v3").doc(name).set(membersData[name], { merge: true })
-          .catch(err => console.error("Firebase Sync issue:", err));
+        // ফায়ারবেসে ডকুমেন্ট আইডি হিসেবে নাম এবং ভেতরে প্রপার্টি হিসেবে নাম সেভ করা হলো
+        const docId = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        db.collection("evidence_board_v4").doc(docId).set({
+          name: name,
+          owner: currentUser.email,
+          screenshots: []
+        }, { merge: true })
+        .catch(err => console.error("Firebase Sync issue:", err));
       }
     }
 
@@ -515,11 +525,12 @@
 
       if (confirm(`Are you sure you want to delete "${memberName}"?`)) {
         delete membersData[memberName];
-        localStorage.setItem('evidenceData_v3', JSON.stringify(membersData));
+        localStorage.setItem('evidenceData_v4', JSON.stringify(membersData));
         renderBoard();
 
         if (db) {
-          db.collection("evidence_board_v3").doc(memberName).delete().catch(err => console.error(err));
+          const docId = memberName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+          db.collection("evidence_board_v4").doc(docId).delete().catch(err => console.error(err));
         }
       }
     }
@@ -550,13 +561,18 @@
         ssList.splice(index, 1);
         if (!Array.isArray(item)) item.screenshots = ssList;
 
-        localStorage.setItem('evidenceData_v3', JSON.stringify(membersData));
+        localStorage.setItem('evidenceData_v4', JSON.stringify(membersData));
         openEvidenceModal(memberName);
         renderBoard();
         renderEvidencePage();
 
         if (db) {
-          db.collection("evidence_board_v3").doc(memberName).set(item, { merge: true });
+          const docId = memberName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+          db.collection("evidence_board_v4").doc(docId).set({
+            name: memberName,
+            owner: item.owner || currentUser.email,
+            screenshots: ssList
+          }, { merge: true });
         }
       }
     }
@@ -672,13 +688,18 @@
             owner: currentUser.email
           });
 
-          localStorage.setItem('evidenceData_v3', JSON.stringify(membersData));
+          localStorage.setItem('evidenceData_v4', JSON.stringify(membersData));
           renderBoard();
           renderEvidencePage();
           closeUploadModal();
 
           if (db) {
-            db.collection("evidence_board_v3").doc(memberName).set(item, { merge: true });
+            const docId = memberName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            db.collection("evidence_board_v4").doc(docId).set({
+              name: memberName,
+              owner: item.owner || currentUser.email,
+              screenshots: item.screenshots
+            }, { merge: true });
           }
         };
         reader.readAsDataURL(fileInput.files[0]);
@@ -732,7 +753,7 @@
               <div class="flex justify-between items-center mt-1">
                 <span class="text-xs text-gray-400">Proof #${idx + 1}</span>
                 ${canDelete ? `
-                <button onclick="deleteEvidence('${memberName}',${idx}, event)" class="text-xs text-red-400 hover:text-red-300 bg-red-950/60 hover:bg-red-900/80 px-2 py-0.5 rounded-md border border-red-800 transition">
+                <button onclick="deleteEvidence('${memberName.replace(/'/g, "\\'")}',${idx}, event)" class="text-xs text-red-400 hover:text-red-300 bg-red-950/60 hover:bg-red-900/80 px-2 py-0.5 rounded-md border border-red-800 transition">
                   🗑️ Delete
                 </button>` : ''}
               </div>
