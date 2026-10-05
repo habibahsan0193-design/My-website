@@ -3,27 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Odommo Batch · Evidence Board (Auth)</title>
+  <title>Odommo Batch · Evidence Board</title>
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Firebase SDKs -->
+  <!-- Firebase SDKs (Compat version for smooth browser use) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
   <style>
-    .zoom-wrapper {
-      overflow: hidden;
-      cursor: grab;
-      user-select: none;
-    }
-    .zoom-wrapper.dragging {
-      cursor: grabbing;
-    }
-    .drag-over {
-      border-color: #f43f5e !important;
-      background-color: rgba(244, 63, 94, 0.1) !important;
-    }
+    .zoom-wrapper { overflow: hidden; cursor: grab; user-select: none; }
+    .zoom-wrapper.dragging { cursor: grabbing; }
     .card-hover-lift {
       transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease, box-shadow 0.25s ease;
     }
@@ -36,24 +26,23 @@
 </head>
 <body class="bg-[#0f1115] text-white p-6 font-sans">
 
-  <!-- Header / Navbar -->
+  <!-- Header -->
   <header class="flex flex-wrap justify-between items-center max-w-6xl mx-auto mb-10 gap-4">
     <div class="flex items-center space-x-3 cursor-pointer group" onclick="switchTab('members')">
-      <div class="bg-red-500/20 text-red-500 p-2 rounded-lg font-bold group-hover:scale-110 transition-transform">⚠️</div>
+      <div class="bg-red-500/25 text-red-500 p-2 rounded-lg font-bold">⚠️</div>
       <div>
-        <h1 class="font-bold text-lg group-hover:text-rose-400 transition-colors">Odommo Batch</h1>
-        <p class="text-xs text-gray-400">Public evidence board</p>
+        <h1 class="font-bold text-lg text-white">Odommo Batch</h1>
+        <p class="text-xs text-gray-400">Public Live Evidence Board</p>
       </div>
     </div>
     
     <div class="flex items-center space-x-3">
       <nav class="space-x-1 bg-[#181a20] p-1.5 rounded-xl border border-gray-800 flex items-center">
-        <button id="navMembers" onclick="switchTab('members')" class="px-4 py-1.5 bg-white text-black rounded-lg font-medium text-sm transition hover:-translate-y-0.5">Members</button>
-        <button id="navEvidence" onclick="switchTab('evidence')" class="px-4 py-1.5 text-gray-400 hover:text-white text-sm transition hover:-translate-y-0.5">Evidence</button>
-        <button onclick="openUploadModal()" class="px-4 py-1.5 text-gray-400 hover:text-white text-sm transition hover:-translate-y-0.5">Upload</button>
+        <button id="navMembers" onclick="switchTab('members')" class="px-4 py-1.5 bg-white text-black rounded-lg font-medium text-sm transition">Members</button>
+        <button id="navEvidence" onclick="switchTab('evidence')" class="px-4 py-1.5 text-gray-400 hover:text-white text-sm transition">Evidence</button>
+        <button onclick="openUploadModal()" class="px-4 py-1.5 text-gray-400 hover:text-white text-sm transition">Upload</button>
       </nav>
 
-      <!-- Auth Action Button (Header) -->
       <div id="authHeaderBtnContainer">
         <button onclick="openAuthModal()" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold transition">Login / Sign Up</button>
       </div>
@@ -61,70 +50,55 @@
   </header>
 
   <main class="max-w-6xl mx-auto">
-
-    <!-- ================= 1. MEMBERS PAGE VIEW ================= -->
+    <!-- Members View -->
     <section id="membersView">
       <div class="flex justify-between items-end mb-6">
         <div>
           <h1 class="text-3xl font-bold mb-2">Group members on record</h1>
-          <p class="text-gray-400">Every member listed here has evidence submitted against them.</p>
+          <p class="text-gray-400">All member profiles and submitted proofs are synced live.</p>
         </div>
-        <button onclick="openAddMemberModal()" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-medium text-sm transition hover:-translate-y-0.5">+ Add Member</button>
+        <button onclick="openAddMemberModal()" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-medium text-sm transition">+ Add Member</button>
       </div>
 
-      <!-- Stats -->
       <div class="grid grid-cols-2 gap-4 max-w-lg mb-8">
-        <div class="bg-[#181a20] p-4 rounded-xl border border-gray-800 card-hover-lift">
+        <div class="bg-[#181a20] p-4 rounded-xl border border-gray-800">
           <div class="text-3xl font-bold" id="totalMembersCount">0</div>
           <div class="text-gray-400 text-sm">Members listed</div>
         </div>
-        <div class="bg-[#181a20] p-4 rounded-xl border border-gray-800 card-hover-lift">
+        <div class="bg-[#181a20] p-4 rounded-xl border border-gray-800">
           <div class="text-3xl font-bold" id="totalScreenshotsCount">0</div>
           <div class="text-gray-400 text-sm">Screenshots submitted</div>
         </div>
       </div>
 
-      <!-- Member Cards Container -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="memberCardsContainer"></div>
     </section>
 
-    <!-- ================= 2. SEPARATE EVIDENCE PAGE VIEW ================= -->
+    <!-- Evidence View -->
     <section id="evidenceView" class="hidden">
-      <h1 class="text-3xl font-bold mb-2">Evidence</h1>
-      <p class="text-gray-400 mb-6">All screenshots are public. Tap an image to view it full size.</p>
-
-      <!-- Filter Buttons -->
+      <h1 class="text-3xl font-bold mb-2">Evidence Gallery</h1>
+      <p class="text-gray-400 mb-6">Tap any image to view it full size.</p>
       <div class="flex flex-wrap gap-2 mb-8" id="evidenceFilterButtons"></div>
-
-      <!-- Evidence Screenshots Grid -->
       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="allEvidenceGrid"></div>
     </section>
-
   </main>
 
-  <!-- ================= AUTH MODAL (LOGIN / SIGN UP) ================= -->
+  <!-- Auth Modal -->
   <div id="authModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
     <div class="bg-[#181a20] max-w-md w-full rounded-2xl border border-gray-800 p-6 relative">
       <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl font-bold">&times;</button>
       <h2 class="text-xl font-bold mb-1">User Authentication</h2>
-      <p class="text-xs text-gray-400 mb-4">Login or Sign Up to access board options.</p>
+      <p class="text-xs text-gray-400 mb-4">Login or Sign Up to manage records.</p>
 
       <form onsubmit="handleAuthSubmit(event)" class="space-y-4">
         <div>
           <label class="block text-xs text-gray-400 mb-1">Email Address</label>
-          <input type="email" id="authEmail" class="w-full bg-[#0f1115] border border-gray-700 p-2.5 rounded-xl text-sm focus:outline-none focus:border-rose-500" placeholder="e.g. abc@gmail.com" required>
+          <input type="email" id="authEmail" class="w-full bg-[#0f1115] border border-gray-700 p-2.5 rounded-xl text-sm focus:outline-none focus:border-rose-500" placeholder="e.g. user@gmail.com" required>
         </div>
-
         <div>
           <label class="block text-xs text-gray-400 mb-1">Password</label>
-          <div class="relative">
-            <input type="password" id="authPass" class="w-full bg-[#0f1115] border border-gray-700 p-2.5 pr-10 rounded-xl text-sm focus:outline-none focus:border-rose-500" placeholder="Password" required>
-            <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition">
-              <span id="eyeIcon">👁️</span>
-            </button>
-          </div>
+          <input type="password" id="authPass" class="w-full bg-[#0f1115] border border-gray-700 p-2.5 rounded-xl text-sm focus:outline-none focus:border-rose-500" placeholder="Password" required>
         </div>
-
         <div class="flex space-x-2 pt-2">
           <button type="submit" onclick="authMode='login'" class="w-1/2 py-2.5 bg-rose-500 hover:bg-rose-600 rounded-xl text-sm font-semibold transition">Login</button>
           <button type="submit" onclick="authMode='signup'" class="w-1/2 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-semibold transition">Sign Up</button>
@@ -133,71 +107,59 @@
     </div>
   </div>
 
-  <!-- ================= ADD MEMBER MODAL ================= -->
+  <!-- Add Member Modal -->
   <div id="addMemberModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-40 p-4">
     <div class="bg-[#181a20] max-w-md w-full rounded-2xl border border-gray-800 p-6 relative">
       <button onclick="closeAddMemberModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl font-bold">&times;</button>
-      <h2 class="text-xl font-bold mb-2">Add New Member Profile</h2>
-      <p class="text-xs text-gray-400 mb-4">Member er naam likhe Enter chapun ba button e click korun.</p>
-      
+      <h2 class="text-xl font-bold mb-2">Add Member Profile</h2>
       <form onsubmit="handleCreateMember(event)" class="space-y-4">
         <div>
           <label class="block text-xs text-gray-400 mb-1">Member Name</label>
-          <input type="text" id="newMemberName" class="w-full bg-[#0f1115] border border-gray-700 rounded-xl p-2.5 text-sm focus:outline-none focus:border-rose-500" placeholder="e.g. PK baby" required>
+          <input type="text" id="newMemberName" class="w-full bg-[#0f1115] border border-gray-700 rounded-xl p-2.5 text-sm focus:outline-none focus:border-rose-500" placeholder="e.g. John Doe" required>
         </div>
-        <button type="submit" id="createMemberBtn" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-medium transition text-sm hover:-translate-y-0.5">Create Profile</button>
+        <button type="submit" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-medium text-sm transition">Create Profile</button>
       </form>
     </div>
   </div>
 
-  <!-- ================= UPLOAD EVIDENCE MODAL ================= -->
+  <!-- Upload Modal -->
   <div id="uploadModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-40 p-4">
     <div class="bg-[#181a20] max-w-md w-full rounded-2xl border border-gray-800 p-6 relative">
       <button onclick="closeUploadModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl font-bold">&times;</button>
       <h2 class="text-xl font-bold mb-4">Submit Evidence</h2>
-      
       <form onsubmit="handleUpload(event)" class="space-y-4">
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Select Member Name</label>
-          <select id="targetMemberSelect" class="w-full bg-[#0f1115] border border-gray-700 rounded-xl p-2.5 text-sm focus:outline-none focus:border-rose-500 text-white" required></select>
+          <label class="block text-xs text-gray-400 mb-1">Select Member</label>
+          <select id="targetMemberSelect" class="w-full bg-[#0f1115] border border-gray-700 rounded-xl p-2.5 text-sm text-white focus:outline-none focus:border-rose-500" required></select>
         </div>
-
         <div>
           <label class="block text-xs text-gray-400 mb-1">Upload Screenshot</label>
-          <div id="dropZone" class="border-2 border-dashed border-gray-700 rounded-xl p-6 text-center bg-[#0f1115] cursor-pointer hover:border-rose-500 transition">
-            <p class="text-xs text-gray-400 mb-2">Drag & Drop screenshot here, or <span class="text-rose-500 font-medium">browse</span></p>
-            <span id="fileNameDisplay" class="text-xs text-rose-400 block font-semibold"></span>
-            <input type="file" id="evidenceFile" accept="image/*" class="hidden" required>
-          </div>
+          <input type="file" id="evidenceFile" accept="image/*" class="w-full text-xs text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-rose-500 file:text-white hover:file:bg-rose-600 cursor-pointer" required>
         </div>
-
-        <button type="submit" id="submitBtn" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-medium transition text-sm hover:-translate-y-0.5">Add Evidence</button>
+        <button type="submit" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-medium text-sm transition">Upload Proof</button>
       </form>
     </div>
   </div>
 
-  <!-- ================= VIEW EVIDENCE MODAL ================= -->
+  <!-- View Evidence Modal -->
   <div id="evidenceModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-40 p-4">
     <div class="bg-[#181a20] max-w-2xl w-full rounded-2xl border border-gray-800 p-6 relative max-h-[90vh] overflow-y-auto">
       <button onclick="closeEvidenceModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl font-bold">&times;</button>
-      <h2 id="evidenceMemberName" class="text-xl font-bold mb-4">Evidence Screenshots</h2>
+      <h2 id="evidenceMemberName" class="text-xl font-bold mb-4">Evidence Gallery</h2>
       <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="galleryGrid"></div>
     </div>
   </div>
 
-  <!-- ================= ZOOM LIGHTBOX ================= -->
+  <!-- Zoom Modal -->
   <div id="zoomModal" class="fixed inset-0 bg-black/95 hidden flex-col items-center justify-center z-50 p-4">
     <span onclick="closeZoom()" class="absolute top-4 right-6 text-white text-4xl cursor-pointer hover:text-red-500 font-bold z-50">&times;</span>
-    <div class="text-xs text-gray-400 absolute top-4 left-6 z-50 bg-[#181a20]/80 p-2 rounded-lg border border-gray-800">
-      💡 <b>Scroll:</b> Zoom In/Out | <b>Click & Drag:</b> Chepe dhore tene shoran
-    </div>
     <div class="zoom-wrapper w-full h-[85vh] flex items-center justify-center relative" id="zoomWrapper">
-      <img id="zoomedImg" class="max-w-full max-h-full rounded-lg transition-transform duration-75 origin-center pointer-events-auto" src="" alt="Zoomable Evidence" draggable="false">
+      <img id="zoomedImg" class="max-w-full max-h-full rounded-lg transition-transform duration-75 origin-center" src="" alt="Zoomable Image">
     </div>
   </div>
 
   <script>
-    // Firebase Config (Updated with your project details)
+    // Firebase Setup using your exact project config
     const firebaseConfig = {
       apiKey: "AIzaSyCzuv5iuPCF3mAeAN2d0VmZVEsMlFivKaQ",
       authDomain: "adommo-24297.firebaseapp.com",
@@ -210,64 +172,51 @@
 
     const ADMIN_EMAIL = "habibahsan0193@gmail.com";
 
-    let db = null;
-    let auth = null;
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
     let currentUser = null;
     let authMode = 'login';
-
-    try {
-      if (firebaseConfig.apiKey) {
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.firestore();
-        auth = firebase.auth();
-      }
-    } catch(e) {
-      console.log("Firebase initialization error:", e);
-    }
-
-    let membersData = {
-      "PK baby": { owner: "admin@odommo.com", screenshots: [] },
-      "Modina Modina/MD": { owner: "admin@odommo.com", screenshots: [] },
-      "Chadni the Seducer": { owner: "admin@odommo.com", screenshots: [] }
-    };
+    let membersData = {};
     let currentFilter = 'All';
 
-    // Firebase Auth Listener
-    if (auth) {
-      auth.onAuthStateChanged(user => {
-        currentUser = user;
-        updateAuthHeaderUI();
-        renderBoard();
-        if (!document.getElementById('evidenceView').classList.contains('hidden')) {
-          renderEvidencePage();
-        }
-      });
-    }
+    // Auth Listener
+    auth.onAuthStateChanged(user => {
+      currentUser = user;
+      updateAuthHeaderUI();
+      renderBoard();
+      if (!document.getElementById('evidenceView').classList.contains('hidden')) {
+        renderEvidencePage();
+      }
+    });
 
-    // Firebase Firestore Realtime Sync (সবার জন্য লাইভ আপডেট দেখানোর জন্য)
-    if (db) {
-      db.collection("evidence_board_v2").onSnapshot((snapshot) => {
-        if (!snapshot.empty) {
-          membersData = {};
-          snapshot.forEach((doc) => {
-            membersData[doc.id] = doc.data() || { owner: "admin@odommo.com", screenshots: [] };
-          });
-        }
-        renderBoard();
-        if (!document.getElementById('evidenceView').classList.contains('hidden')) {
-          renderEvidencePage();
-        }
-      }, (error) => {
-        console.error("Firestore sync error: ", error);
-      });
-    }
+    // Realtime Database Sync (Live for everyone)
+    db.collection("evidence_board_v3").onSnapshot((snapshot) => {
+      membersData = {};
+      if (snapshot.empty) {
+        // Default initial data if database is empty
+        const defaults = {
+          "PK baby": { owner: "admin@odommo.com", screenshots: [] },
+          "Modina Modina/MD": { owner: "admin@odommo.com", screenshots: [] }
+        };
+        Object.keys(defaults).forEach(name => {
+          db.collection("evidence_board_v3").doc(name).set(defaults[name]);
+        });
+      } else {
+        snapshot.forEach((doc) => {
+          membersData[doc.id] = doc.data() || { owner: "admin@odommo.com", screenshots: [] };
+        });
+      }
+      renderBoard();
+      if (!document.getElementById('evidenceView').classList.contains('hidden')) {
+        renderEvidencePage();
+      }
+    });
 
     function checkIsAdmin() {
       if (!currentUser || !currentUser.email) return false;
-      const userMail = currentUser.email.toLowerCase().trim();
-      const adminMail = ADMIN_EMAIL.toLowerCase().trim();
-      const adminPrefix = adminMail.split('@')[0];
-      return userMail === adminMail || userMail.startsWith(adminPrefix);
+      return currentUser.email.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim();
     }
 
     function canDeleteContent(ownerEmail) {
@@ -279,12 +228,11 @@
     function updateAuthHeaderUI() {
       const container = document.getElementById('authHeaderBtnContainer');
       if (currentUser) {
-        const isAdmin = checkIsAdmin();
         container.innerHTML = `
           <div class="flex items-center space-x-2 bg-[#181a20] px-3 py-1.5 rounded-xl border border-gray-800 text-xs">
-            <span>User: <b>${currentUser.email.split('@')[0]}</b></span>
-            ${isAdmin ? '<span class="bg-rose-500 text-white font-bold text-[10px] px-1.5 py-0.5 rounded">ADMIN</span>' : ''}
-            <button onclick="logoutUser()" class="bg-red-900/60 hover:bg-red-800 text-red-200 px-2 py-0.5 rounded transition ml-1">Logout</button>
+            <span><b>${currentUser.email.split('@')[0]}</b></span>
+            ${checkIsAdmin() ? '<span class="bg-rose-500 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">ADMIN</span>' : ''}
+            <button onclick="auth.signOut()" class="bg-red-900/60 hover:bg-red-800 text-red-200 px-2 py-0.5 rounded ml-1 transition">Logout</button>
           </div>
         `;
       } else {
@@ -292,36 +240,15 @@
       }
     }
 
-    function togglePasswordVisibility() {
-      const passInput = document.getElementById('authPass');
-      const eyeIcon = document.getElementById('eyeIcon');
-      if (passInput.type === 'password') {
-        passInput.type = 'text';
-        eyeIcon.innerText = '🙈';
-      } else {
-        passInput.type = 'password';
-        eyeIcon.innerText = '👁️';
-      }
-    }
-
     function handleAuthSubmit(e) {
       e.preventDefault();
-      const emailInput = document.getElementById('authEmail').value.trim();
-      const email = emailInput.includes('@') ? emailInput : emailInput + '@gmail.com';
+      const email = document.getElementById('authEmail').value.trim();
       const pass = document.getElementById('authPass').value;
 
-      if (auth) {
-        if (authMode === 'login') {
-          auth.signInWithEmailAndPassword(email, pass).then(() => closeAuthModal()).catch(err => alert(err.message));
-        } else {
-          auth.createUserWithEmailAndPassword(email, pass).then(() => closeAuthModal()).catch(err => alert(err.message));
-        }
-      }
-    }
-
-    function logoutUser() {
-      if (auth) {
-        auth.signOut();
+      if (authMode === 'login') {
+        auth.signInWithEmailAndPassword(email, pass).then(() => closeAuthModal()).catch(err => alert(err.message));
+      } else {
+        auth.createUserWithEmailAndPassword(email, pass).then(() => closeAuthModal()).catch(err => alert(err.message));
       }
     }
 
@@ -334,13 +261,13 @@
       if (tab === 'members') {
         membersView.classList.remove('hidden');
         evidenceView.classList.add('hidden');
-        navMembers.className = "px-4 py-1.5 bg-white text-black rounded-lg font-medium text-sm transition hover:-translate-y-0.5";
-        navEvidence.className = "px-4 py-1.5 text-gray-400 hover:text-white text-sm transition hover:-translate-y-0.5";
+        navMembers.className = "px-4 py-1.5 bg-white text-black rounded-lg font-medium text-sm transition";
+        navEvidence.className = "px-4 py-1.5 text-gray-400 hover:text-white text-sm transition";
       } else {
         membersView.classList.add('hidden');
         evidenceView.classList.remove('hidden');
-        navEvidence.className = "px-4 py-1.5 bg-white text-black rounded-lg font-medium text-sm transition hover:-translate-y-0.5";
-        navMembers.className = "px-4 py-1.5 text-gray-400 hover:text-white text-sm transition hover:-translate-y-0.5";
+        navEvidence.className = "px-4 py-1.5 bg-white text-black rounded-lg font-medium text-sm transition";
+        navMembers.className = "px-4 py-1.5 text-gray-400 hover:text-white text-sm transition";
         renderEvidencePage();
       }
     }
@@ -348,95 +275,70 @@
     function renderBoard() {
       const container = document.getElementById('memberCardsContainer');
       container.innerHTML = '';
-
-      const memberNames = Object.keys(membersData);
+      const names = Object.keys(membersData);
       let totalScreenshots = 0;
 
-      memberNames.forEach(name => {
+      names.forEach(name => {
         const item = membersData[name];
-        const ssList = Array.isArray(item) ? item : (item.screenshots || []);
-        const ownerEmail = Array.isArray(item) ? 'admin@odommo.com' : (item.owner || 'admin@odommo.com');
-        
-        const count = ssList.length;
-        totalScreenshots += count;
+        const ssList = item.screenshots || [];
+        totalScreenshots += ssList.length;
         const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-        const canDelete = canDeleteContent(ownerEmail);
+        const canDelete = canDeleteContent(item.owner);
 
-        const cardHTML = `
-          <div class="bg-[#181a20] p-5 rounded-2xl border border-gray-800 flex flex-col justify-between card-hover-lift group relative">
-            ${canDelete ? `<button onclick="deleteMember('${name}', event)" title="Delete Member" class="absolute top-4 right-4 text-xs text-gray-500 hover:text-red-400 p-1 transition-transform hover:scale-125">🗑️</button>` : ''}
+        container.innerHTML += `
+          <div class="bg-[#181a20] p-5 rounded-2xl border border-gray-800 flex flex-col justify-between card-hover-lift relative">
+            ${canDelete ? `<button onclick="deleteMember('${name}', event)" class="absolute top-4 right-4 text-xs text-gray-500 hover:text-red-400 transition">🗑️</button>` : ''}
             <div class="flex items-center space-x-3 mb-3">
-              <span class="w-10 h-10 flex items-center justify-center rounded-full bg-rose-900/50 text-rose-400 font-bold group-hover:scale-110 transition-transform">${initials}</span>
+              <span class="w-10 h-10 flex items-center justify-center rounded-full bg-rose-900/40 text-rose-400 font-bold">${initials}</span>
               <div>
-                <h3 class="font-semibold text-lg group-hover:text-rose-400 transition-colors pr-6">${name}</h3>
-                <p class="text-xs text-gray-400">${count} screenshot${count === 1 ? '' : 's'}</p>
+                <h3 class="font-semibold text-lg pr-5">${name}</h3>
+                <p class="text-xs text-gray-400">${ssList.length} screenshot(s)</p>
               </div>
             </div>
             <div class="flex space-x-2 mt-4">
-              <button onclick="openEvidenceModal('${name}')" class="w-1/2 py-2 text-sm bg-[#22252e] hover:bg-gray-700 rounded-xl transition-all duration-200 hover:-translate-y-0.5">View evidence</button>
-              <button onclick="openUploadModal('${name}')" class="w-1/2 py-2 text-sm bg-[#f43f5e] hover:bg-rose-600 text-white rounded-xl font-medium transition-all duration-200 hover:-translate-y-0.5">Add evidence</button>
+              <button onclick="openEvidenceModal('${name}')" class="w-1/2 py-2 text-sm bg-[#22252e] hover:bg-gray-700 rounded-xl transition">View evidence</button>
+              <button onclick="openUploadModal('${name}')" class="w-1/2 py-2 text-sm bg-rose-500 hover:bg-rose-600 text-white font-medium rounded-xl transition">Add evidence</button>
             </div>
           </div>
         `;
-        container.innerHTML += cardHTML;
       });
 
-      document.getElementById('totalMembersCount').innerText = memberNames.length;
+      document.getElementById('totalMembersCount').innerText = names.length;
       document.getElementById('totalScreenshotsCount').innerText = totalScreenshots;
     }
 
     function renderEvidencePage() {
       const filterContainer = document.getElementById('evidenceFilterButtons');
       const grid = document.getElementById('allEvidenceGrid');
-      
       filterContainer.innerHTML = '';
       grid.innerHTML = '';
 
       let totalSS = 0;
-      Object.values(membersData).forEach(item => {
-        const list = Array.isArray(item) ? item : (item.screenshots || []);
-        totalSS += list.length;
-      });
+      Object.values(membersData).forEach(item => totalSS += (item.screenshots || []).length);
 
-      const filterList = ['All', ...Object.keys(membersData)];
-      filterList.forEach(name => {
-        let count = totalSS;
-        if (name !== 'All') {
-          const item = membersData[name];
-          const list = Array.isArray(item) ? item : (item.screenshots || []);
-          count = list.length;
-        }
-
+      const filters = ['All', ...Object.keys(membersData)];
+      filters.forEach(name => {
         const isActive = currentFilter === name;
-        const activeClass = isActive 
-          ? "bg-rose-500 text-white font-semibold" 
-          : "bg-[#181a20] text-gray-400 hover:text-white border border-gray-800";
-
         filterContainer.innerHTML += `
-          <button onclick="setFilter('${name}')" class="px-4 py-2 rounded-full text-sm transition-all duration-200 hover:-translate-y-0.5 ${activeClass}">
-            ${name} ${name === 'All' ? `(${count})` : ''}
+          <button onclick="currentFilter='${name}'; renderEvidencePage();" class="px-4 py-2 rounded-full text-sm transition ${isActive ? 'bg-rose-500 text-white font-semibold' : 'bg-[#181a20] text-gray-400 border border-gray-800 hover:text-white'}">
+            ${name} ${name === 'All' ? `(${totalSS})` : ''}
           </button>
         `;
       });
 
-      let hasScreenshots = false;
+      let hasContent = false;
       Object.keys(membersData).forEach(memberName => {
         if (currentFilter === 'All' || currentFilter === memberName) {
-          const item = membersData[memberName];
-          const ssList = Array.isArray(item) ? item : (item.screenshots || []);
-
-          ssList.forEach((ssObj, idx) => {
-            hasScreenshots = true;
-            const src = typeof ssObj === 'string' ? ssObj : ssObj.src;
-            const ssOwner = typeof ssObj === 'string' ? (item.owner || 'admin@odommo.com') : (ssObj.owner || item.owner || 'admin@odommo.com');
-            const canDelete = canDeleteContent(ssOwner);
-
+          const ssList = membersData[memberName].screenshots || [];
+          ssList.forEach((ss, idx) => {
+            hasContent = true;
+            const canDelete = canDeleteContent(ss.owner || membersData[memberName].owner);
             grid.innerHTML += `
-              <div class="relative group cursor-pointer bg-[#181a20] p-2 rounded-2xl border border-gray-800 card-hover-lift" onclick="zoomImage('${src}')">
-                <img src="${src}" class="w-full h-44 object-cover rounded-xl group-hover:opacity-75 transition">
+              <div class="relative group bg-[#181a20] p-2 rounded-2xl border border-gray-800 card-hover-lift cursor-pointer" onclick="zoomImage('${ss.src}')">
+                <img src="${ss.src}" class="w-full h-44 object-cover rounded-xl group-hover:opacity-75 transition">
                 <div class="flex justify-between items-center mt-2 px-1">
-                  <span class="text-xs font-semibold text-gray-300 truncate max-w-[70%] group-hover:text-rose-400 transition-colors">${memberName}</span>
-                  ${canDelete ? `<button onclick="deleteEvidence('${memberName}',${idx}, event)" class="text-xs text-red-400 hover:text-red-300 transition-transform hover:scale-125">🗑️</button>` : ''}
+                  <span class="text-xs font-semibold text-gray-300 truncate max-w-[75%]">${memberName}</span>
+                  ${canDelete ? `<button onclick="deleteEvidence('${memberName}',${idx}, event)" class="text-xs text-red-400 hover:text-red-300 transition">🗑️</button>` : ''}
                 </div>
               </div>
             `;
@@ -444,297 +346,107 @@
         }
       });
 
-      if (!hasScreenshots) {
-        grid.innerHTML = `<p class="text-sm text-gray-400 col-span-full py-10 text-center">No screenshots available in this category.</p>`;
+      if (!hasContent) {
+        grid.innerHTML = `<p class="text-sm text-gray-400 col-span-full py-10 text-center">No screenshots available.</p>`;
       }
     }
 
-    function setFilter(name) {
-      currentFilter = name;
-      renderEvidencePage();
-    }
-
-    function handleCreateMember(event) {
-      event.preventDefault();
-      if (!currentUser) {
-        alert("Please Login or Sign Up first to add a member!");
-        openAuthModal();
-        return;
-      }
-
-      const inputField = document.getElementById('newMemberName');
-      const name = inputField.value.trim();
-
+    function handleCreateMember(e) {
+      e.preventDefault();
+      if (!currentUser) { alert("Please login first!"); openAuthModal(); return; }
+      const name = document.getElementById('newMemberName').value.trim();
       if (name) {
-        if (!membersData[name]) {
-          membersData[name] = {
-            owner: currentUser.email,
-            screenshots: []
-          };
-        }
-
-        if (db) {
-          db.collection("evidence_board_v2").doc(name).set(membersData[name], { merge: true }).then(() => {
-            closeAddMemberModal();
-          }).catch(err => alert("Error: " + err.message));
-        }
+        db.collection("evidence_board_v3").doc(name).set({
+          owner: currentUser.email,
+          screenshots: []
+        }).then(() => closeAddMemberModal()).catch(err => alert(err.message));
       }
     }
 
-    function deleteMember(memberName, event) {
+    function deleteMember(name, event) {
       event.stopPropagation();
-      const item = membersData[memberName];
-      const ownerEmail = Array.isArray(item) ? 'admin@odommo.com' : (item.owner || 'admin@odommo.com');
-
-      if (!canDeleteContent(ownerEmail)) {
-        alert("Only the profile Creator or Master Admin can delete this member!");
-        return;
-      }
-
-      if (confirm(`Are you sure you want to delete "${memberName}"?`)) {
-        if (db) {
-          db.collection("evidence_board_v2").doc(memberName).delete().catch(err => console.error(err));
-        }
+      if (confirm(`Delete member "${name}"?`)) {
+        db.collection("evidence_board_v3").doc(name).delete();
       }
     }
 
-    function populateMemberDropdown(selectedName = '') {
-      const select = document.getElementById('targetMemberSelect');
-      select.innerHTML = '<option value="" disabled selected>Select a member</option>';
-      
-      Object.keys(membersData).forEach(name => {
-        const isSelected = name === selectedName ? 'selected' : '';
-        select.innerHTML += `<option value="${name}" ${isSelected}>${name}</option>`;
-      });
-    }
-
-    function deleteEvidence(memberName, index, event) {
-      event.stopPropagation();
-      const item = membersData[memberName];
-      const ssList = Array.isArray(item) ? item : (item.screenshots || []);
-      const targetSS = ssList[index];
-      const ssOwner = typeof targetSS === 'string' ? (item.owner || 'admin@odommo.com') : (targetSS.owner || item.owner || 'admin@odommo.com');
-
-      if (!canDeleteContent(ssOwner)) {
-        alert("Only the uploader of this screenshot or Master Admin can delete it!");
-        return;
-      }
-
-      if (confirm('Are you sure you want to delete this screenshot?')) {
-        ssList.splice(index, 1);
-        if (!Array.isArray(item)) item.screenshots = ssList;
-
-        if (db) {
-          db.collection("evidence_board_v2").doc(memberName).set(item, { merge: true }).then(() => {
-            openEvidenceModal(memberName);
-          });
-        }
-      }
-    }
-
-    // Zoom & Drag Logic
-    let zoomScale = 1, translateX = 0, translateY = 0, isMouseDown = false, startX = 0, startY = 0;
-    const img = document.getElementById('zoomedImg');
-    const wrapper = document.getElementById('zoomWrapper');
-
-    function updateTransform() {
-      img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${zoomScale})`;
-    }
-
-    wrapper.addEventListener('wheel', function(e) {
+    function handleUpload(e) {
       e.preventDefault();
-      if (e.deltaY < 0) {
-        zoomScale += 0.2;
-      } else {
-        zoomScale = Math.max(0.8, zoomScale - 0.2);
-        if (zoomScale <= 1) { translateX = 0; translateY = 0; }
-      }
-      updateTransform();
-    });
-
-    wrapper.addEventListener('mousedown', function(e) {
-      if (e.button !== 0) return;
-      isMouseDown = true;
-      startX = e.clientX - translateX;
-      startY = e.clientY - translateY;
-      wrapper.classList.add('dragging');
-    });
-
-    window.addEventListener('mousemove', function(e) {
-      if (!isMouseDown) return;
-      e.preventDefault();
-      translateX = e.clientX - startX;
-      translateY = e.clientY - startY;
-      updateTransform();
-    });
-
-    window.addEventListener('mouseup', function() {
-      isMouseDown = false;
-      wrapper.classList.remove('dragging');
-    });
-
-    function zoomImage(imageSrc) {
-      zoomScale = 1; translateX = 0; translateY = 0; isMouseDown = false;
-      updateTransform();
-      img.src = imageSrc;
-      document.getElementById('zoomModal').classList.remove('hidden');
-      document.getElementById('zoomModal').classList.add('flex');
-    }
-
-    function closeZoom() {
-      document.getElementById('zoomModal').classList.add('hidden');
-      document.getElementById('zoomModal').classList.remove('flex');
-    }
-
-    // Drag & Drop Upload
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('evidenceFile');
-    const fileNameDisplay = document.getElementById('fileNameDisplay');
-
-    dropZone.addEventListener('click', () => fileInput.click());
-    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-    ['dragleave', 'dragend'].forEach(type => dropZone.addEventListener(type, () => dropZone.classList.remove('drag-over')));
-
-    dropZone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dropZone.classList.remove('drag-over');
-      if (e.dataTransfer.files.length) {
-        fileInput.files = e.dataTransfer.files;
-        fileNameDisplay.innerText = "Selected: " + e.dataTransfer.files[0].name;
-      }
-    });
-
-    fileInput.addEventListener('change', () => {
-      if (fileInput.files.length) fileNameDisplay.innerText = "Selected: " + fileInput.files[0].name;
-    });
-
-    function handleUpload(event) {
-      event.preventDefault();
-      if (!currentUser) {
-        alert("Please Login or Sign Up first to submit evidence!");
-        openAuthModal();
-        return;
-      }
-
+      if (!currentUser) { alert("Please login first!"); openAuthModal(); return; }
       const memberName = document.getElementById('targetMemberSelect').value;
-
-      if (!memberName) {
-        alert('Please select a member first!');
-        return;
-      }
+      const fileInput = document.getElementById('evidenceFile');
 
       if (fileInput.files && fileInput.files[0]) {
         const reader = new FileReader();
-        reader.onload = function(e) {
-          const base64Img = e.target.result;
-          
-          if (!membersData[memberName]) {
-            membersData[memberName] = { owner: currentUser.email, screenshots: [] };
-          }
+        reader.onload = function(evt) {
+          const item = membersData[memberName] || { owner: currentUser.email, screenshots: [] };
+          item.screenshots.push({ src: evt.target.result, owner: currentUser.email });
 
-          let item = membersData[memberName];
-          if (Array.isArray(item)) {
-            membersData[memberName] = { owner: 'admin@odommo.com', screenshots: item };
-            item = membersData[memberName];
-          }
-
-          item.screenshots.push({
-            src: base64Img,
-            owner: currentUser.email
-          });
-
-          closeUploadModal();
-
-          if (db) {
-            db.collection("evidence_board_v2").doc(memberName).set(item, { merge: true }).catch(err => {
-              alert("Error uploading image: " + err.message);
-            });
-          }
+          db.collection("evidence_board_v3").doc(memberName).set(item, { merge: true })
+            .then(() => closeUploadModal())
+            .catch(err => alert(err.message));
         };
         reader.readAsDataURL(fileInput.files[0]);
       }
     }
 
-    // Modal Control Functions
-    function openAuthModal() {
-      const modal = document.getElementById('authModal');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
+    function deleteEvidence(memberName, index, event) {
+      event.stopPropagation();
+      if (confirm("Delete this screenshot?")) {
+        const item = membersData[memberName];
+        item.screenshots.splice(index, 1);
+        db.collection("evidence_board_v3").doc(memberName).set(item, { merge: true })
+          .then(() => openEvidenceModal(memberName));
+      }
     }
 
-    function closeAuthModal() {
-      const modal = document.getElementById('authModal');
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
+    // Modal Control Helpers
+    function openAuthModal() { document.getElementById('authModal').classList.replace('hidden', 'flex'); }
+    function closeAuthModal() { document.getElementById('authModal').classList.replace('flex', 'hidden'); }
+    function openAddMemberModal() { document.getElementById('addMemberModal').classList.replace('hidden', 'flex'); }
+    function closeAddMemberModal() { document.getElementById('addMemberModal').classList.replace('flex', 'hidden'); document.getElementById('newMemberName').value=''; }
+    
+    function openUploadModal(selected = '') {
+      const select = document.getElementById('targetMemberSelect');
+      select.innerHTML = '<option value="" disabled selected>Select a member</option>';
+      Object.keys(membersData).forEach(n => {
+        select.innerHTML += `<option value="${n}" ${n===selected?'selected':''}>${n}</option>`;
+      });
+      document.getElementById('uploadModal').classList.replace('hidden', 'flex');
     }
-
-    function openAddMemberModal() {
-      const modal = document.getElementById('addMemberModal');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-      setTimeout(() => document.getElementById('newMemberName').focus(), 50);
-    }
-
-    function closeAddMemberModal() {
-      const modal = document.getElementById('addMemberModal');
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-      document.getElementById('newMemberName').value = '';
-    }
+    function closeUploadModal() { document.getElementById('uploadModal').classList.replace('flex', 'hidden'); }
 
     function openEvidenceModal(memberName) {
       document.getElementById('evidenceMemberName').innerText = 'Evidence: ' + memberName;
       const gallery = document.getElementById('galleryGrid');
       gallery.innerHTML = '';
-      
-      const item = membersData[memberName];
-      const ssList = Array.isArray(item) ? item : (item ? item.screenshots || [] : []);
+      const ssList = membersData[memberName]?.screenshots || [];
 
       if (ssList.length > 0) {
-        ssList.forEach((ssObj, idx) => {
-          const src = typeof ssObj === 'string' ? ssObj : ssObj.src;
-          const ssOwner = typeof ssObj === 'string' ? (item.owner || 'admin@odommo.com') : (ssObj.owner || item.owner || 'admin@odommo.com');
-          const canDelete = canDeleteContent(ssOwner);
-
+        ssList.forEach((ss, idx) => {
+          const canDelete = canDeleteContent(ss.owner || membersData[memberName].owner);
           gallery.innerHTML += `
-            <div class="relative group cursor-pointer" onclick="zoomImage('${src}')">
-              <img src="${src}" class="w-full h-36 object-cover rounded-xl border border-gray-700 group-hover:opacity-75 transition">
+            <div class="relative group cursor-pointer" onclick="zoomImage('${ss.src}')">
+              <img src="${ss.src}" class="w-full h-36 object-cover rounded-xl border border-gray-700 group-hover:opacity-75 transition">
               <div class="flex justify-between items-center mt-1">
-                <span class="text-xs text-gray-400">Proof #${idx + 1}</span>
-                ${canDelete ? `
-                <button onclick="deleteEvidence('${memberName}',${idx}, event)" class="text-xs text-red-400 hover:text-red-300 bg-red-950/60 hover:bg-red-900/80 px-2 py-0.5 rounded-md border border-red-800 transition">
-                  🗑️ Delete
-                </button>` : ''}
+                <span class="text-xs text-gray-400">Proof #${idx+1}</span>
+                ${canDelete ? `<button onclick="deleteEvidence('${memberName}',${idx}, event)" class="text-xs text-red-400 hover:text-red-300">🗑️ Delete</button>` : ''}
               </div>
             </div>
           `;
         });
       } else {
-        gallery.innerHTML = `<p class="text-sm text-gray-400 col-span-3 text-center py-4">No screenshots available for this member.</p>`;
+        gallery.innerHTML = `<p class="text-sm text-gray-400 col-span-3 text-center py-4">No screenshots available.</p>`;
       }
-      document.getElementById('evidenceModal').classList.remove('hidden');
-      document.getElementById('evidenceModal').classList.add('flex');
+      document.getElementById('evidenceModal').classList.replace('hidden', 'flex');
     }
+    function closeEvidenceModal() { document.getElementById('evidenceModal').classList.replace('flex', 'hidden'); }
 
-    function closeEvidenceModal() {
-      document.getElementById('evidenceModal').classList.add('hidden');
-      document.getElementById('evidenceModal').classList.remove('flex');
+    function zoomImage(src) {
+      document.getElementById('zoomedImg').src = src;
+      document.getElementById('zoomModal').classList.replace('hidden', 'flex');
     }
-
-    function openUploadModal(memberName = '') {
-      populateMemberDropdown(memberName);
-      fileNameDisplay.innerText = '';
-      document.getElementById('uploadModal').classList.remove('hidden');
-      document.getElementById('uploadModal').classList.add('flex');
-    }
-
-    function closeUploadModal() {
-      document.getElementById('uploadModal').classList.add('hidden');
-      document.getElementById('uploadModal').classList.remove('flex');
-    }
-
-    // Initial Load
-    renderBoard();
+    function closeZoom() { document.getElementById('zoomModal').classList.replace('flex', 'hidden'); }
   </script>
 </body>
 </html>
