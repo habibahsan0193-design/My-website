@@ -185,26 +185,33 @@
     </div>
   </div>
 
-  <!-- ================= ZOOM LIGHTBOX ================= -->
+  <!-- ================= ZOOM LIGHTBOX (WITH PAN & NAVIGATION) ================= -->
   <div id="zoomModal" class="fixed inset-0 bg-black/95 hidden flex-col items-center justify-center z-50 p-4">
     <span onclick="closeZoom()" class="absolute top-4 right-6 text-white text-4xl cursor-pointer hover:text-red-500 font-bold z-50">&times;</span>
     <div class="text-xs text-gray-400 absolute top-4 left-6 z-50 bg-[#181a20]/80 p-2 rounded-lg border border-gray-800">
-      💡 <b>Scroll:</b> Zoom In/Out | <b>Click & Drag:</b> Chepe dhore tene shoran
+      💡 <b>Scroll:</b> Zoom | <b>Click & Drag:</b> Move Image | <b>← / →:</b> Prev/Next
     </div>
+
+    <!-- Previous Button -->
+    <button onclick="prevImage(event)" class="absolute left-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-rose-600 text-white p-3 rounded-full text-2xl font-bold z-50 transition border border-gray-700">&#10094;</button>
+
     <div class="zoom-wrapper w-full h-[85vh] flex items-center justify-center relative" id="zoomWrapper">
-      <img id="zoomedImg" class="max-w-full max-h-full rounded-lg transition-transform duration-75 origin-center pointer-events-auto" src="" alt="Zoomable Evidence" draggable="false">
+      <img id="zoomedImg" class="max-w-full max-h-full rounded-lg transition-transform duration-75 origin-center" src="" alt="Zoomable Evidence" draggable="false">
     </div>
+
+    <!-- Next Button -->
+    <button onclick="nextImage(event)" class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-rose-600 text-white p-3 rounded-full text-2xl font-bold z-50 transition border border-gray-700">&#10095;</button>
   </div>
 
   <script>
-    // Firebase Config
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "SENDER_ID",
-      appId: "APP_ID"
+      apiKey: "AIzaSyCzuv5iuPCF3mAeAN2d0VmZVEsMlFivKaQ",
+      authDomain: "adommo-24297.firebaseapp.com",
+      projectId: "adommo-24297",
+      storageBucket: "adommo-24297.firebasestorage.app",
+      messagingSenderId: "1059800003803",
+      appId: "1:1059800003803:web:8e8895224d00f0566548fe",
+      measurementId: "G-8H1CYXTZX2"
     };
 
     const ADMIN_EMAIL = "habibahsan0193@gmail.com";
@@ -215,24 +222,25 @@
     let authMode = 'login';
 
     try {
-      if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+      if (firebaseConfig.apiKey) {
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
         auth = firebase.auth();
       }
     } catch(e) {
-      console.log("Firebase fallback mode active.");
+      console.log("Firebase init error:", e);
     }
 
-    // Data Structure: Object containing items with owner email
-    let membersData = JSON.parse(localStorage.getItem('evidenceData_v2')) || {
+    let membersData = {
       "PK baby": { owner: "admin@odommo.com", screenshots: [] },
       "Modina Modina/MD": { owner: "admin@odommo.com", screenshots: [] },
       "Chadni the Seducer": { owner: "admin@odommo.com", screenshots: [] }
     };
     let currentFilter = 'All';
 
-    // Firebase Auth Listener
+    let currentGalleryList = [];
+    let currentGalleryIndex = 0;
+
     if (auth) {
       auth.onAuthStateChanged(user => {
         currentUser = user;
@@ -244,14 +252,18 @@
       });
     }
 
-    // Firebase Firestore Sync
     if (db) {
-      db.collection("evidence_board_v2").onSnapshot((snapshot) => {
-        membersData = {};
-        snapshot.forEach((doc) => {
-          membersData[doc.id] = doc.data() || { owner: "admin@odommo.com", screenshots: [] };
-        });
-        localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
+      db.collection("evidence_board_v3").onSnapshot((snapshot) => {
+        if (!snapshot.empty) {
+          membersData = {};
+          snapshot.forEach((doc) => {
+            membersData[doc.id] = doc.data() || { owner: "admin@odommo.com", screenshots: [] };
+          });
+        } else {
+          Object.keys(membersData).forEach(name => {
+            db.collection("evidence_board_v3").doc(name).set(membersData[name]);
+          });
+        }
         renderBoard();
         if (!document.getElementById('evidenceView').classList.contains('hidden')) {
           renderEvidencePage();
@@ -263,8 +275,7 @@
       if (!currentUser || !currentUser.email) return false;
       const userMail = currentUser.email.toLowerCase().trim();
       const adminMail = ADMIN_EMAIL.toLowerCase().trim();
-      const adminPrefix = adminMail.split('@')[0];
-      return userMail === adminMail || userMail.startsWith(adminPrefix);
+      return userMail === adminMail || userMail.startsWith(adminMail.split('@')[0]);
     }
 
     function canDeleteContent(ownerEmail) {
@@ -313,22 +324,11 @@
         } else {
           auth.createUserWithEmailAndPassword(email, pass).then(() => closeAuthModal()).catch(err => alert(err.message));
         }
-      } else {
-        currentUser = { email: email };
-        updateAuthHeaderUI();
-        renderBoard();
-        closeAuthModal();
       }
     }
 
     function logoutUser() {
-      if (auth) {
-        auth.signOut();
-      } else {
-        currentUser = null;
-        updateAuthHeaderUI();
-        renderBoard();
-      }
+      if (auth) auth.signOut();
     }
 
     function switchTab(tab) {
@@ -354,37 +354,32 @@
     function renderBoard() {
       const container = document.getElementById('memberCardsContainer');
       container.innerHTML = '';
-
       const memberNames = Object.keys(membersData);
       let totalScreenshots = 0;
 
       memberNames.forEach(name => {
         const item = membersData[name];
-        const ssList = Array.isArray(item) ? item : (item.screenshots || []);
-        const ownerEmail = Array.isArray(item) ? 'admin@odommo.com' : (item.owner || 'admin@odommo.com');
-        
-        const count = ssList.length;
-        totalScreenshots += count;
+        const ssList = item.screenshots || [];
+        totalScreenshots += ssList.length;
         const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-        const canDelete = canDeleteContent(ownerEmail);
+        const canDelete = canDeleteContent(item.owner);
 
-        const cardHTML = `
+        container.innerHTML += `
           <div class="bg-[#181a20] p-5 rounded-2xl border border-gray-800 flex flex-col justify-between card-hover-lift group relative">
-            ${canDelete ? `<button onclick="deleteMember('${name}', event)" title="Delete Member" class="absolute top-4 right-4 text-xs text-gray-500 hover:text-red-400 p-1 transition-transform hover:scale-125">🗑️</button>` : ''}
+            ${canDelete ? `<button onclick="deleteMember('${name}', event)" class="absolute top-4 right-4 text-xs text-gray-500 hover:text-red-400 p-1 transition">🗑️</button>` : ''}
             <div class="flex items-center space-x-3 mb-3">
-              <span class="w-10 h-10 flex items-center justify-center rounded-full bg-rose-900/50 text-rose-400 font-bold group-hover:scale-110 transition-transform">${initials}</span>
+              <span class="w-10 h-10 flex items-center justify-center rounded-full bg-rose-900/50 text-rose-400 font-bold">${initials}</span>
               <div>
-                <h3 class="font-semibold text-lg group-hover:text-rose-400 transition-colors pr-6">${name}</h3>
-                <p class="text-xs text-gray-400">${count} screenshot${count === 1 ? '' : 's'}</p>
+                <h3 class="font-semibold text-lg pr-6">${name}</h3>
+                <p class="text-xs text-gray-400">${ssList.length} screenshot(s)</p>
               </div>
             </div>
             <div class="flex space-x-2 mt-4">
-              <button onclick="openEvidenceModal('${name}')" class="w-1/2 py-2 text-sm bg-[#22252e] hover:bg-gray-700 rounded-xl transition-all duration-200 hover:-translate-y-0.5">View evidence</button>
-              <button onclick="openUploadModal('${name}')" class="w-1/2 py-2 text-sm bg-[#f43f5e] hover:bg-rose-600 text-white rounded-xl font-medium transition-all duration-200 hover:-translate-y-0.5">Add evidence</button>
+              <button onclick="openEvidenceModal('${name}')" class="w-1/2 py-2 text-sm bg-[#22252e] hover:bg-gray-700 rounded-xl transition">View evidence</button>
+              <button onclick="openUploadModal('${name}')" class="w-1/2 py-2 text-sm bg-[#f43f5e] hover:bg-rose-600 text-white font-medium rounded-xl transition">Add evidence</button>
             </div>
           </div>
         `;
-        container.innerHTML += cardHTML;
       });
 
       document.getElementById('totalMembersCount').innerText = memberNames.length;
@@ -394,55 +389,50 @@
     function renderEvidencePage() {
       const filterContainer = document.getElementById('evidenceFilterButtons');
       const grid = document.getElementById('allEvidenceGrid');
-      
       filterContainer.innerHTML = '';
       grid.innerHTML = '';
 
       let totalSS = 0;
-      Object.values(membersData).forEach(item => {
-        const list = Array.isArray(item) ? item : (item.screenshots || []);
-        totalSS += list.length;
+      currentGalleryList = [];
+
+      Object.keys(membersData).forEach(memberName => {
+        const ssList = membersData[memberName].screenshots || [];
+        ssList.forEach(ss => totalSS++);
       });
 
       const filterList = ['All', ...Object.keys(membersData)];
       filterList.forEach(name => {
         let count = totalSS;
         if (name !== 'All') {
-          const item = membersData[name];
-          const list = Array.isArray(item) ? item : (item.screenshots || []);
-          count = list.length;
+          count = (membersData[name].screenshots || []).length;
         }
-
         const isActive = currentFilter === name;
-        const activeClass = isActive 
-          ? "bg-rose-500 text-white font-semibold" 
-          : "bg-[#181a20] text-gray-400 hover:text-white border border-gray-800";
-
         filterContainer.innerHTML += `
-          <button onclick="setFilter('${name}')" class="px-4 py-2 rounded-full text-sm transition-all duration-200 hover:-translate-y-0.5 ${activeClass}">
+          <button onclick="setFilter('${name}')" class="px-4 py-2 rounded-full text-sm transition ${isActive ? 'bg-rose-500 text-white font-semibold' : 'bg-[#181a20] text-gray-400 border border-gray-800 hover:text-white'}">
             ${name} ${name === 'All' ? `(${count})` : ''}
           </button>
         `;
       });
 
       let hasScreenshots = false;
+      let globalIdx = 0;
+
       Object.keys(membersData).forEach(memberName => {
         if (currentFilter === 'All' || currentFilter === memberName) {
-          const item = membersData[memberName];
-          const ssList = Array.isArray(item) ? item : (item.screenshots || []);
-
-          ssList.forEach((ssObj, idx) => {
+          const ssList = membersData[memberName].screenshots || [];
+          ssList.forEach((ss, idx) => {
             hasScreenshots = true;
-            const src = typeof ssObj === 'string' ? ssObj : ssObj.src;
-            const ssOwner = typeof ssObj === 'string' ? (item.owner || 'admin@odommo.com') : (ssObj.owner || item.owner || 'admin@odommo.com');
-            const canDelete = canDeleteContent(ssOwner);
+            currentGalleryList.push(ss.src);
+            const capturedIdx = globalIdx;
+            globalIdx++;
+            const canDelete = canDeleteContent(ss.owner || membersData[memberName].owner);
 
             grid.innerHTML += `
-              <div class="relative group cursor-pointer bg-[#181a20] p-2 rounded-2xl border border-gray-800 card-hover-lift" onclick="zoomImage('${src}')">
-                <img src="${src}" class="w-full h-44 object-cover rounded-xl group-hover:opacity-75 transition">
+              <div class="relative group cursor-pointer bg-[#181a20] p-2 rounded-2xl border border-gray-800 card-hover-lift" onclick="zoomImageByIndex(${capturedIdx})">
+                <img src="${ss.src}" class="w-full h-44 object-cover rounded-xl group-hover:opacity-75 transition">
                 <div class="flex justify-between items-center mt-2 px-1">
-                  <span class="text-xs font-semibold text-gray-300 truncate max-w-[70%] group-hover:text-rose-400 transition-colors">${memberName}</span>
-                  ${canDelete ? `<button onclick="deleteEvidence('${memberName}',${idx}, event)" class="text-xs text-red-400 hover:text-red-300 transition-transform hover:scale-125">🗑️</button>` : ''}
+                  <span class="text-xs font-semibold text-gray-300 truncate max-w-[70%]">${memberName}</span>
+                  ${canDelete ? `<button onclick="deleteEvidence('${memberName}',${idx}, event)" class="text-xs text-red-400 hover:text-red-300">🗑️</button>` : ''}
                 </div>
               </div>
             `;
@@ -451,7 +441,7 @@
       });
 
       if (!hasScreenshots) {
-        grid.innerHTML = `<p class="text-sm text-gray-400 col-span-full py-10 text-center">No screenshots available in this category.</p>`;
+        grid.innerHTML = `<p class="text-sm text-gray-400 col-span-full py-10 text-center">No screenshots available.</p>`;
       }
     }
 
@@ -460,96 +450,35 @@
       renderEvidencePage();
     }
 
-    function handleCreateMember(event) {
-      event.preventDefault();
-      if (!currentUser) {
-        alert("Please Login or Sign Up first to add a member!");
-        openAuthModal();
-        return;
-      }
-
-      const inputField = document.getElementById('newMemberName');
-      const name = inputField.value.trim();
-
+    function handleCreateMember(e) {
+      e.preventDefault();
+      if (!currentUser) { alert("Please login first!"); openAuthModal(); return; }
+      const name = document.getElementById('newMemberName').value.trim();
       if (name) {
-        if (!membersData[name]) {
-          membersData[name] = {
-            owner: currentUser.email,
-            screenshots: []
-          };
-        }
-
-        localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
-        renderBoard();
-
-        if (db) {
-          db.collection("evidence_board_v2").doc(name).set(membersData[name], { merge: true }).catch(err => console.error("Firebase Sync issue:", err));
-        }
-
-        closeAddMemberModal();
+        db.collection("evidence_board_v3").doc(name).set({ owner: currentUser.email, screenshots: [] })
+          .then(() => closeAddMemberModal()).catch(err => alert(err.message));
       }
     }
 
-    function deleteMember(memberName, event) {
+    function deleteMember(name, event) {
       event.stopPropagation();
-      const item = membersData[memberName];
-      const ownerEmail = Array.isArray(item) ? 'admin@odommo.com' : (item.owner || 'admin@odommo.com');
-
-      if (!canDeleteContent(ownerEmail)) {
-        alert("Only the profile Creator or Master Admin can delete this member!");
-        return;
+      if (confirm(`Delete member "${name}"?`)) {
+        db.collection("evidence_board_v3").doc(name).delete();
       }
-
-      if (confirm(`Are you sure you want to delete "${memberName}"?`)) {
-        delete membersData[memberName];
-        localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
-        renderBoard();
-
-        if (db) {
-          db.collection("evidence_board_v2").doc(memberName).delete().catch(err => console.error(err));
-        }
-      }
-    }
-
-    function populateMemberDropdown(selectedName = '') {
-      const select = document.getElementById('targetMemberSelect');
-      select.innerHTML = '<option value="" disabled selected>Select a member</option>';
-      
-      Object.keys(membersData).forEach(name => {
-        const isSelected = name === selectedName ? 'selected' : '';
-        select.innerHTML += `<option value="${name}" ${isSelected}>${name}</option>`;
-      });
     }
 
     function deleteEvidence(memberName, index, event) {
       event.stopPropagation();
-      const item = membersData[memberName];
-      const ssList = Array.isArray(item) ? item : (item.screenshots || []);
-      const targetSS = ssList[index];
-      const ssOwner = typeof targetSS === 'string' ? (item.owner || 'admin@odommo.com') : (targetSS.owner || item.owner || 'admin@odommo.com');
-
-      if (!canDeleteContent(ssOwner)) {
-        alert("Only the uploader of this screenshot or Master Admin can delete it!");
-        return;
-      }
-
-      if (confirm('Are you sure you want to delete this screenshot?')) {
-        ssList.splice(index, 1);
-        if (!Array.isArray(item)) item.screenshots = ssList;
-
-        localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
-        openEvidenceModal(memberName);
-        renderBoard();
-        renderEvidencePage();
-
-        if (db) {
-          db.collection("evidence_board_v2").doc(memberName).set(item, { merge: true });
-        }
+      if (confirm("Delete this screenshot?")) {
+        const item = membersData[memberName];
+        item.screenshots.splice(index, 1);
+        db.collection("evidence_board_v3").doc(memberName).set(item, { merge: true })
+          .then(() => openEvidenceModal(memberName));
       }
     }
 
-    // Zoom & Drag Logic
-    let zoomScale = 1, translateX = 0, translateY = 0, isMouseDown = false, startX = 0, startY = 0;
+    // Zoom, Pan (Drag) & Navigation Logic FIXED
+    let zoomScale = 1, translateX = 0, translateY = 0, isDragging = false, startX = 0, startY = 0;
     const img = document.getElementById('zoomedImg');
     const wrapper = document.getElementById('zoomWrapper');
 
@@ -560,24 +489,24 @@
     wrapper.addEventListener('wheel', function(e) {
       e.preventDefault();
       if (e.deltaY < 0) {
-        zoomScale += 0.2;
+        zoomScale = Math.min(zoomScale + 0.2, 4); // Max zoom 4x
       } else {
-        zoomScale = Math.max(0.8, zoomScale - 0.2);
-        if (zoomScale <= 1) { translateX = 0; translateY = 0; }
+        zoomScale = Math.max(1, zoomScale - 0.2); // Min zoom 1x
+        if (zoomScale === 1) { translateX = 0; translateY = 0; }
       }
       updateTransform();
     });
 
     wrapper.addEventListener('mousedown', function(e) {
-      if (e.button !== 0) return;
-      isMouseDown = true;
+      if (e.button !== 0 || zoomScale <= 1) return; // Only drag when zoomed in
+      isDragging = true;
       startX = e.clientX - translateX;
       startY = e.clientY - translateY;
       wrapper.classList.add('dragging');
     });
 
     window.addEventListener('mousemove', function(e) {
-      if (!isMouseDown) return;
+      if (!isDragging) return;
       e.preventDefault();
       translateX = e.clientX - startX;
       translateY = e.clientY - startY;
@@ -585,24 +514,50 @@
     });
 
     window.addEventListener('mouseup', function() {
-      isMouseDown = false;
+      isDragging = false;
       wrapper.classList.remove('dragging');
     });
 
-    function zoomImage(imageSrc) {
-      zoomScale = 1; translateX = 0; translateY = 0; isMouseDown = false;
+    window.addEventListener('keydown', function(e) {
+      const zoomModal = document.getElementById('zoomModal');
+      if (!zoomModal.classList.contains('hidden')) {
+        if (e.key === 'ArrowRight') nextImage(e);
+        else if (e.key === 'ArrowLeft') prevImage(e);
+        else if (e.key === 'Escape') closeZoom();
+      }
+    });
+
+    function zoomImageByIndex(index) {
+      currentGalleryIndex = index;
+      zoomScale = 1; translateX = 0; translateY = 0;
       updateTransform();
-      img.src = imageSrc;
-      document.getElementById('zoomModal').classList.remove('hidden');
-      document.getElementById('zoomModal').classList.add('flex');
+      img.src = currentGalleryList[currentGalleryIndex];
+      document.getElementById('zoomModal').classList.replace('hidden', 'flex');
+    }
+
+    function nextImage(e) {
+      e.stopPropagation();
+      if (currentGalleryList.length === 0) return;
+      currentGalleryIndex = (currentGalleryIndex + 1) % currentGalleryList.length;
+      zoomScale = 1; translateX = 0; translateY = 0;
+      updateTransform();
+      img.src = currentGalleryList[currentGalleryIndex];
+    }
+
+    function prevImage(e) {
+      e.stopPropagation();
+      if (currentGalleryList.length === 0) return;
+      currentGalleryIndex = (currentGalleryIndex - 1 + currentGalleryList.length) % currentGalleryList.length;
+      zoomScale = 1; translateX = 0; translateY = 0;
+      updateTransform();
+      img.src = currentGalleryList[currentGalleryIndex];
     }
 
     function closeZoom() {
-      document.getElementById('zoomModal').classList.add('hidden');
-      document.getElementById('zoomModal').classList.remove('flex');
+      document.getElementById('zoomModal').classList.replace('flex', 'hidden');
     }
 
-    // Drag & Drop Upload
+    // Upload Logic
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('evidenceFile');
     const fileNameDisplay = document.getElementById('fileNameDisplay');
@@ -624,133 +579,70 @@
       if (fileInput.files.length) fileNameDisplay.innerText = "Selected: " + fileInput.files[0].name;
     });
 
-    function handleUpload(event) {
-      event.preventDefault();
-      if (!currentUser) {
-        alert("Please Login or Sign Up first to submit evidence!");
-        openAuthModal();
-        return;
-      }
-
+    function handleUpload(e) {
+      e.preventDefault();
+      if (!currentUser) { alert("Please login first!"); openAuthModal(); return; }
       const memberName = document.getElementById('targetMemberSelect').value;
-
-      if (!memberName) {
-        alert('Please select a member first!');
-        return;
-      }
+      if (!memberName) { alert('Please select a member!'); return; }
 
       if (fileInput.files && fileInput.files[0]) {
         const reader = new FileReader();
-        reader.onload = function(e) {
-          const base64Img = e.target.result;
-          
-          if (!membersData[memberName]) {
-            membersData[memberName] = { owner: currentUser.email, screenshots: [] };
-          }
-
-          let item = membersData[memberName];
-          if (Array.isArray(item)) {
-            membersData[memberName] = { owner: 'admin@odommo.com', screenshots: item };
-            item = membersData[memberName];
-          }
-
-          item.screenshots.push({
-            src: base64Img,
-            owner: currentUser.email
-          });
-
-          localStorage.setItem('evidenceData_v2', JSON.stringify(membersData));
-          renderBoard();
-          renderEvidencePage();
+        reader.onload = function(evt) {
+          const item = membersData[memberName] || { owner: currentUser.email, screenshots: [] };
+          item.screenshots.push({ src: evt.target.result, owner: currentUser.email });
           closeUploadModal();
-
-          if (db) {
-            db.collection("evidence_board_v2").doc(memberName).set(item, { merge: true });
-          }
+          db.collection("evidence_board_v3").doc(memberName).set(item, { merge: true })
+            .catch(err => alert("Error: " + err.message));
         };
         reader.readAsDataURL(fileInput.files[0]);
       }
     }
 
-    // Modal Control Functions
-    function openAuthModal() {
-      const modal = document.getElementById('authModal');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
+    function openAuthModal() { document.getElementById('authModal').classList.replace('hidden', 'flex'); }
+    function closeAuthModal() { document.getElementById('authModal').classList.replace('flex', 'hidden'); }
+    function openAddMemberModal() { document.getElementById('addMemberModal').classList.replace('hidden', 'flex'); document.getElementById('newMemberName').focus(); }
+    function closeAddMemberModal() { document.getElementById('addMemberModal').classList.replace('flex', 'hidden'); document.getElementById('newMemberName').value = ''; }
+    
+    function openUploadModal(memberName = '') {
+      const select = document.getElementById('targetMemberSelect');
+      select.innerHTML = '<option value="" disabled selected>Select a member</option>';
+      Object.keys(membersData).forEach(n => {
+        select.innerHTML += `<option value="${n}" ${n === memberName ? 'selected' : ''}>${n}</option>`;
+      });
+      fileNameDisplay.innerText = '';
+      document.getElementById('uploadModal').classList.replace('hidden', 'flex');
     }
-
-    function closeAuthModal() {
-      const modal = document.getElementById('authModal');
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-    }
-
-    function openAddMemberModal() {
-      const modal = document.getElementById('addMemberModal');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-      setTimeout(() => document.getElementById('newMemberName').focus(), 50);
-    }
-
-    function closeAddMemberModal() {
-      const modal = document.getElementById('addMemberModal');
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-      document.getElementById('newMemberName').value = '';
-    }
+    function closeUploadModal() { document.getElementById('uploadModal').classList.replace('flex', 'hidden'); }
 
     function openEvidenceModal(memberName) {
       document.getElementById('evidenceMemberName').innerText = 'Evidence: ' + memberName;
       const gallery = document.getElementById('galleryGrid');
       gallery.innerHTML = '';
-      
-      const item = membersData[memberName];
-      const ssList = Array.isArray(item) ? item : (item ? item.screenshots || [] : []);
+      const ssList = membersData[memberName]?.screenshots || [];
+
+      currentGalleryList = [];
+      ssList.forEach(ss => currentGalleryList.push(ss.src));
 
       if (ssList.length > 0) {
-        ssList.forEach((ssObj, idx) => {
-          const src = typeof ssObj === 'string' ? ssObj : ssObj.src;
-          const ssOwner = typeof ssObj === 'string' ? (item.owner || 'admin@odommo.com') : (ssObj.owner || item.owner || 'admin@odommo.com');
-          const canDelete = canDeleteContent(ssOwner);
-
+        ssList.forEach((ss, idx) => {
+          const canDelete = canDeleteContent(ss.owner || membersData[memberName].owner);
           gallery.innerHTML += `
-            <div class="relative group cursor-pointer" onclick="zoomImage('${src}')">
-              <img src="${src}" class="w-full h-36 object-cover rounded-xl border border-gray-700 group-hover:opacity-75 transition">
+            <div class="relative group cursor-pointer" onclick="zoomImageByIndex(${idx})">
+              <img src="${ss.src}" class="w-full h-36 object-cover rounded-xl border border-gray-700 group-hover:opacity-75 transition">
               <div class="flex justify-between items-center mt-1">
                 <span class="text-xs text-gray-400">Proof #${idx + 1}</span>
-                ${canDelete ? `
-                <button onclick="deleteEvidence('${memberName}',${idx}, event)" class="text-xs text-red-400 hover:text-red-300 bg-red-950/60 hover:bg-red-900/80 px-2 py-0.5 rounded-md border border-red-800 transition">
-                  🗑️ Delete
-                </button>` : ''}
+                ${canDelete ? `<button onclick="deleteEvidence('${memberName}',${idx}, event)" class="text-xs text-red-400 hover:text-red-300">🗑️ Delete</button>` : ''}
               </div>
             </div>
           `;
         });
       } else {
-        gallery.innerHTML = `<p class="text-sm text-gray-400 col-span-3 text-center py-4">No screenshots available for this member.</p>`;
+        gallery.innerHTML = `<p class="text-sm text-gray-400 col-span-3 text-center py-4">No screenshots available.</p>`;
       }
-      document.getElementById('evidenceModal').classList.remove('hidden');
-      document.getElementById('evidenceModal').classList.add('flex');
+      document.getElementById('evidenceModal').classList.replace('hidden', 'flex');
     }
+    function closeEvidenceModal() { document.getElementById('evidenceModal').classList.replace('flex', 'hidden'); }
 
-    function closeEvidenceModal() {
-      document.getElementById('evidenceModal').classList.add('hidden');
-      document.getElementById('evidenceModal').classList.remove('flex');
-    }
-
-    function openUploadModal(memberName = '') {
-      populateMemberDropdown(memberName);
-      fileNameDisplay.innerText = '';
-      document.getElementById('uploadModal').classList.remove('hidden');
-      document.getElementById('uploadModal').classList.add('flex');
-    }
-
-    function closeUploadModal() {
-      document.getElementById('uploadModal').classList.add('hidden');
-      document.getElementById('uploadModal').classList.remove('flex');
-    }
-
-    // Initial Load
     renderBoard();
   </script>
 </body>
