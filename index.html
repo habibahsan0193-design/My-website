@@ -39,7 +39,7 @@
   <!-- Header / Navbar -->
   <header class="flex flex-wrap justify-between items-center max-w-6xl mx-auto mb-10 gap-4">
     <div class="flex items-center space-x-3 cursor-pointer group" onclick="switchTab('members')">
-      <div class="bg-red-500/20 text-red-500 p-2 rounded-lg font-bold group-hover:scale-110 transition-transform">⚠️</div>
+      <div class="bg-red-500/20 text-red-500 p-2 rounded-lg font-bold group-hover:scale-110 transition-transform">⚠️️</div>
       <div>
         <h1 class="font-bold text-lg group-hover:text-rose-400 transition-colors">Odommo Batch</h1>
         <p class="text-xs text-gray-400">Public evidence board</p>
@@ -47,12 +47,14 @@
     </div>
     
     <div class="flex items-center space-x-3">
-      <nav class="space-x-1 bg-[#181a20] p-1.5 rounded-xl border border-gray-800 flex items-center">
+      <nav class="space-x-1 bg-[#181a20] p-1.5 rounded-xl border border-gray-800 flex items-center flex-wrap gap-1">
         <button id="navMembers" onclick="switchTab('members')" class="px-4 py-1.5 bg-white text-black rounded-lg font-medium text-sm transition hover:-translate-y-0.5">Members</button>
         <button id="navEvidence" onclick="switchTab('evidence')" class="px-4 py-1.5 text-gray-400 hover:text-white text-sm transition hover:-translate-y-0.5">Evidence</button>
         <button onclick="openUploadModal()" class="px-4 py-1.5 text-gray-400 hover:text-white text-sm transition hover:-translate-y-0.5">Upload</button>
+        <!-- Bug Report Button in Navbar -->
+        <button onclick="openBugModal()" class="px-4 py-1.5 bg-amber-500/10 text-amber-400 hover:bg-amber-500 hover:text-black rounded-lg font-medium text-sm transition border border-amber-500/30">🐛 Report Bug</button>
         <!-- Admin Bug Reports Tab Button -->
-        <button id="navBugs" onclick="switchTab('bugs')" class="px-4 py-1.5 text-rose-400 hover:text-white text-sm transition hover:-translate-y-0.5 hidden">🐛 Bug Reports</button>
+        <button id="navBugs" onclick="switchTab('bugs')" class="px-4 py-1.5 text-rose-400 hover:text-white text-sm transition hover:-translate-y-0.5 hidden">📋 View Bugs</button>
       </nav>
 
       <!-- Auth Action Button (Header) -->
@@ -112,13 +114,6 @@
     </section>
 
   </main>
-
-  <!-- ================= FIXED BOTTOM-LEFT BUG REPORT BUTTON ================= -->
-  <div style="position: fixed; bottom: 25px; left: 25px; z-index: 999999;">
-    <button onclick="openBugModal()" style="background-color: #f43f5e; color: white; padding: 12px 18px; border-radius: 9999px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px; border: 2px solid #fb7185; cursor: pointer;">
-      <span>🐛 Report Bug</span>
-    </button>
-  </div>
 
   <!-- ================= BUG REPORT MODAL ================= -->
   <div id="bugModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
@@ -750,7 +745,7 @@
     function closeUploadModal() { document.getElementById('uploadModal').classList.replace('flex', 'hidden'); }
 
     function openEvidenceModal(memberName) {
-      document.getElementById('evidenceMemberName').innerText = 'Evidence: ' + memberName;
+      document.getElementById('evidenceMemberName').innerText = 'Evidence: ' +memberName;
       const gallery = document.getElementById('galleryGrid');
       gallery.innerHTML = '';
       const ssList = membersData[memberName]?.screenshots || [];
@@ -761,7 +756,6 @@
       if (ssList.length > 0) {
         ssList.forEach((ss, idx) => {
           const canDelete = canDeleteContent(ss.owner || membersData[memberName].owner);
-          gallery.html += `...`; // omitted for brevity
           gallery.innerHTML += `
             <div class="relative group cursor-pointer" onclick="zoomImageByIndex(${idx})">
               <img src="${ss.src}" class="w-full h-36 object-cover rounded-xl border border-gray-700 group-hover:opacity-75 transition">
