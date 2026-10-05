@@ -168,7 +168,7 @@
     <button onclick="nextZoomImage()" class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-rose-500 text-white p-3 rounded-full text-xl z-50 transition">❯</button>
 
     <div class="zoom-wrapper w-full h-[85vh] flex items-center justify-center relative overflow-hidden" id="zoomWrapper">
-      <img id="zoomedImg" class="max-w-full max-h-full rounded-lg cursor-grab active:cursor-grabbing origin-center" src="" alt="Zoomable Image">
+      <img id="zoomedImg" class="max-w-full max-h-full rounded-lg cursor-grab active:cursor-grabbing origin-center select-none" src="" alt="Zoomable Image" draggable="false">
     </div>
     <div id="zoomCounter" class="absolute bottom-4 text-xs text-gray-400"></div>
   </div>
@@ -537,9 +537,9 @@
       e.preventDefault();
       const img = document.getElementById('zoomedImg');
       if (e.deltaY < 0) {
-        currentScale = Math.min(currentScale + 0.15, 4); // Zoom In
+        currentScale = Math.min(currentScale + 0.25, 5); // Zoom In
       } else {
-        currentScale = Math.max(currentScale - 0.15, 0.5); // Zoom Out
+        currentScale = Math.max(currentScale - 0.25, 1); // Zoom Out (Minimum 1)
         if (currentScale === 1) {
           panX = 0;
           panY = 0;
@@ -548,14 +548,16 @@
       img.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
     });
 
-    // Mouse Drag/Pan functionality
+    // Mouse Drag/Pan functionality (Works smoothly for both X and Y axis)
     const zoomedImg = document.getElementById('zoomedImg');
 
     zoomedImg.addEventListener('mousedown', (e) => {
-      isDragging = true;
-      startX = e.clientX - panX;
-      startY = e.clientY - panY;
-      zoomedImg.style.cursor = 'grabbing';
+      if (currentScale > 1) {
+        isDragging = true;
+        startX = e.clientX - panX;
+        startY = e.clientY - panY;
+        zoomedImg.style.cursor = 'grabbing';
+      }
     });
 
     window.addEventListener('mousemove', (e) => {
